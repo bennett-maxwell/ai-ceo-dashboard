@@ -1,0 +1,17 @@
+name: Rebuild AI CEO dashboard
+on:
+  schedule: [{cron: "*/10 * * * *"}]
+  workflow_dispatch: {}
+permissions: {contents: read, pages: write, id-token: write}
+concurrency: {group: pages, cancel-in-progress: true}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: {name: github-pages}
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 build.py
+        env: {NOTION_TOKEN: "${{ secrets.NOTION_TOKEN }}"}
+      - uses: actions/upload-pages-artifact@v3
+        with: {path: site}
+      - uses: actions/deploy-pages@v4
