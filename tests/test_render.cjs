@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm');
 const PRIMARY=['3edcf5514fd3812ea137d3ce41dafab3','3edcf5514fd381d7a91dd8a7bdcccb87','3edcf5514fd3816fb3a2cc308727bde6','3edcf5514fd38131bd00e1080bf6d826','3edcf5514fd381759f9bee1cfade7819','3edcf5514fd381ecb7a7f9c2f8411b1d'];
 const DOT='3edcf5514fd381c18e9ad31f16369f38';
-function run(at,complete=true){
+function run(at,complete=true,mutate=()=>{}){
  const DateFixed=class extends Date{constructor(...args){super(...(args.length?args:['2026-10-04T21:00:00Z']))}static now(){return Date.parse('2026-10-04T21:00:00Z')}};
  const element=()=>({innerHTML:'',textContent:'',style:{},addEventListener(){},classList:{toggle(){}}});
  const ids=['now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
@@ -15,6 +15,7 @@ function run(at,complete=true){
  data.report_coverage.per_agent[PRIMARY[0]].latest={url:'dash-row',Agent:[PRIMARY[0]],Logged:logged,Time:'2026-10-05T02:59:00Z',Device:[],Project:[]};
  data.report_coverage.per_agent[PRIMARY[4]].latest={url:'grok-row',Agent:[PRIMARY[4]],Logged:'2026-10-02T23:10:00Z',Time:'2026-10-02T23:09:00Z',Device:[],Project:[]};
  data.report_coverage.per_agent[DOT]={agent_id:DOT,included:true,exhaustive:complete,matching_rows:1,latest:{url:'dot-row',Agent:[DOT],Logged:'2026-10-04T20:59:30Z',Time:'2026-10-04T20:59:00Z'}};
+ mutate(data);
  let source=fs.readFileSync('template.html','utf8').replace('__REPORT_STATUS__',fs.readFileSync('report_status.js','utf8')).replace('__AT__',at).replace('__SNAP__',JSON.stringify(data));
  const script=source.match(/<script>([\s\S]*?)<\/script>/)[1];vm.createContext(env);vm.runInContext(script,env);return env;
 }
@@ -29,4 +30,16 @@ test('fresh rendered board retains primary denominator and recovered Grok histor
 });
 test('incomplete source coverage cannot become authoritative zero',()=>{
  const env=run('2026-10-04T21:00:00Z',false);assert.match(env.now.innerHTML,/source coverage is incomplete/);assert.match(env.now.innerHTML,/>–<\/b>/);assert.match(env.agents.innerHTML,/Not included — coverage unknown/);
+});
+test('future Co-CEO receipt has anomaly text and never a green card',()=>{
+ const env=run('2026-10-04T21:00:00Z',true,data=>data.coceo=[{Author:[DOT],Logged:'2026-10-05T03:00:00Z'}]);
+ assert.doesNotMatch(env.coceo.innerHTML,/<div class="card g"><h3>Dot/);
+ assert.match(env.coceo.innerHTML,/Invalid server receipt/);
+});
+test('stale or incomplete device evidence is unavailable rather than absence',()=>{
+ for(const [at,complete] of [['2026-10-04T19:30:35Z',true],['2026-10-04T21:00:00Z',false]]){
+  const env=run(at,complete,data=>data.devices=[{url:'device',Device:'Studio'}]);
+  assert.match(env.devices.innerHTML,/Live status unavailable/);
+  assert.doesNotMatch(env.devices.innerHTML,/No recent validated receipt/);
+ }
 });

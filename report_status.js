@@ -15,7 +15,7 @@
   const last=coverage?.latest||null,view=snapshot(builtAt,now);
   const result={last,process:"Unknown — no runtime proof",cls:"",color:"var(--gray)",label:"Not included — coverage unknown",workerFresh:false,receiptRecent:false,worker:"Unverified",receipt:"Unknown",coverage:coverage||null};
   if(!coverage?.included||coverage.exhaustive!==true)return result;
-  if(!last){result.label=view.available?"Never observed as of exhaustive snapshot query":"Live status unavailable — stale or invalid snapshot";return result}
+  if(!last){result.label=view.available?(coverage.invalid_receipt_rows?"Only invalid server receipts — unverified":"Never observed as of exhaustive snapshot query"):"Live status unavailable — stale or invalid snapshot";return result}
   const logged=time(last.Logged),worker=time(last.Time);
   const validLogged=logged!=null&&logged<=now&&view.built!=null&&logged<=view.built;
   result.receipt=validLogged?(now-logged<=WORKER_MAX_AGE_MS?"Recent server receipt":"Old server receipt"):"Invalid server receipt";

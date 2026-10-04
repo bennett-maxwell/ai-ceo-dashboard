@@ -56,3 +56,10 @@ test('invalid or future URL and storage watermarks do not suppress valid refresh
   await env.refreshSnapshot();assert.equal(calls.filter(x=>typeof x==='string').length,1);
  }
 });
+test('invalid embedded snapshot recovers once per valid manifest without loops',async()=>{
+ for(const at of ['invalid','2099-01-01T00:00:00Z']){
+  const {env,calls}=context('2026-10-04T19:10:00Z');env.SNAP_AT=at;
+  await env.refreshSnapshot();await env.refreshSnapshot();assert.equal(calls.filter(x=>typeof x==='string').length,1);
+  const {env:cached,calls:again}=context('2026-10-04T19:10:00Z');cached.SNAP_AT=at;cached.location.href=calls[1];await cached.refreshSnapshot();assert.equal(again.length,1);
+ }
+});

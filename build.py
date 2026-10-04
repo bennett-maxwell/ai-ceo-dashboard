@@ -56,6 +56,8 @@ def rows(k, body=None, limit=None):
         r = {"url": pg["id"].replace("-", "")}
         for name in PUBLIC_FIELDS[k]:
             r[name] = val(props[name]) if name in props else None
+        if k == "checkins" and props.get("Agent", {}).get("has_more"):
+            r["_agent_relation_complete"] = False
         res.append(r)
     return res
 
@@ -74,26 +76,33 @@ def timestamp(value):
     except ValueError:
         return None
 
-def report_coverage(reports, agents, devices, projects):
+def report_coverage(reports, agents, devices, projects, cutoff=None):
     # Scan to exhaustion before limiting the activity feed. Never infer absence from a cap.
     unique = {r["url"]: r for r in reports}
     source_rows = sorted(unique.values(), key=lambda r: (timestamp(r.get("Logged")) or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc), r["url"]), reverse=True)
+    cutoff = cutoff or datetime.datetime.now(datetime.timezone.utc)
+    complete = all(r.get("_agent_relation_complete", True) for r in source_rows)
     known_agents = {a["url"] for a in agents}
     known_devices = {d["url"] for d in devices}
     known_projects = {p["url"] for p in projects}
     per_agent = {}
     for agent_id in known_agents | set(PRIMARY_AGENT_IDS):
         linked = [r for r in source_rows if agent_id in (r.get("Agent") or [])]
-        latest = linked[0] if linked else None
-        valid_older = [timestamp(r.get("Time")) for r in linked[1:]
+        valid = [r for r in linked if timestamp(r.get("Logged")) is not None and timestamp(r["Logged"]) <= cutoff]
+        invalid = [r for r in linked if r not in valid]
+        latest = valid[0] if valid else None
+        valid_older = [timestamp(r.get("Time")) for r in valid[1:]
                        if timestamp(r.get("Time")) is not None and timestamp(r.get("Logged")) is not None
                        and timestamp(r.get("Time")) <= timestamp(r.get("Logged"))]
         worker_time = timestamp(latest.get("Time")) if latest else None
         latest_replayed = bool(worker_time and valid_older and worker_time <= max(valid_older))
         per_agent[agent_id] = {"agent_id": agent_id, "included": agent_id in known_agents,
-                               "exhaustive": True, "matching_rows": len(linked),
+                               "exhaustive": complete, "matching_rows": len(linked),
+                               "invalid_receipt_rows": len(invalid), "latest_invalid_receipt": invalid[0] if invalid else None,
                                "latest": latest, "latest_replayed": latest_replayed}
-    return source_rows, {"source": DB["checkins"], "exhaustive": True,
+    return source_rows, {"source": DB["checkins"], "exhaustive": complete,
+                         "receipt_cutoff": cutoff.isoformat().replace("+00:00", "Z"),
+                         "truncated_agent_relation_rows": sum(r.get("_agent_relation_complete") is False for r in source_rows),
                          "rows_scanned": len(reports), "unique_rows": len(unique),
                          "duplicate_row_ids": len(reports)-len(unique),
                          "unlinked_rows": sum(not r.get("Agent") for r in source_rows),

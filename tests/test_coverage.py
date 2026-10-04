@@ -1,4 +1,5 @@
 import unittest
+import datetime
 from unittest.mock import patch
 import build
 
@@ -41,5 +42,16 @@ class CoverageTests(unittest.TestCase):
         page={'id':'row','properties':{'Agent':{'type':'relation','relation':[{'id':'dash'}]},'Private':{'type':'rich_text','rich_text':[{'plain_text':'SECRET_SENTINEL'}]}}}
         with patch.object(build,'q',return_value=[page]):public=build.rows('checkins')
         _,c=self.coverage(public);self.assertNotIn('SECRET_SENTINEL',str(c));self.assertNotIn('Private',str(c))
+    def test_invalid_logged_is_quarantined_without_suppressing_valid_latest(self):
+        records=[self.report('valid'),self.report('future',logged='2026-10-05T03:00:00Z'),self.report('invalid',logged='bad')]
+        cutoff=datetime.datetime(2026,10,4,21,tzinfo=datetime.timezone.utc)
+        _,c=build.report_coverage(records,[{'url':'dash'}],[],[],cutoff)
+        seat=c['per_agent']['dash'];self.assertEqual(seat['latest']['url'],'valid')
+        self.assertEqual(seat['invalid_receipt_rows'],2);self.assertEqual(seat['latest_invalid_receipt']['url'],'future')
+    def test_truncated_agent_relation_blocks_exhaustive_absence(self):
+        page={'id':'row','properties':{'Agent':{'type':'relation','relation':[{'id':'dash'}],'has_more':True}}}
+        with patch.object(build,'q',return_value=[page]):public=build.rows('checkins')
+        _,c=self.coverage(public);self.assertFalse(c['exhaustive'])
+        self.assertFalse(c['per_agent']['absent']['exhaustive']);self.assertEqual(c['truncated_agent_relation_rows'],1)
 
 if __name__=='__main__':unittest.main()
