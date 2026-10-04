@@ -90,10 +90,12 @@ async function refreshSnapshot(){
   if(snapshotAge(version.built_at)==null||!Number.isFinite(current)||next<=current)return;
   const url=new URL(location.href);
   // A newer manifest with cached old HTML gets one reload per version, not a loop.
-  if(Date.parse(url.searchParams.get("snapshot"))>=next)return;
+  const queryStamp=url.searchParams.get("snapshot");
+  if(snapshotAge(queryStamp)!=null&&Date.parse(queryStamp)>=next)return;
   const key="dashboard-refresh:"+url.pathname;
   try{
-   if(Date.parse(sessionStorage.getItem(key))>=next)return;
+   const storedStamp=sessionStorage.getItem(key);
+   if(snapshotAge(storedStamp)!=null&&Date.parse(storedStamp)>=next)return;
    sessionStorage.setItem(key,version.built_at);
   }catch{/* The URL guard still bounds reloads when browser storage is unavailable. */}
   url.searchParams.set("snapshot",version.built_at);

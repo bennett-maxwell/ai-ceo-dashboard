@@ -47,3 +47,12 @@ test('concurrent polls share one request and later versions can reload',async()=
  env.fetch=async()=>({ok:true,json:async()=>({built_at:'2026-10-04T19:20:00Z'})});
  await env.refreshSnapshot();assert.equal(calls.filter(x=>typeof x==='string').length,2);
 });
+
+test('invalid or future URL and storage watermarks do not suppress valid refresh',async()=>{
+ for(const stamp of ['garbage','2099-01-01T00:00:00Z']){
+  const {env,calls}=context('2026-10-04T19:10:00Z');
+  env.location.href='https://example.com/dashboard/?snapshot='+stamp+'#projects';
+  env.sessionStorage.setItem('dashboard-refresh:/dashboard/',stamp);
+  await env.refreshSnapshot();assert.equal(calls.filter(x=>typeof x==='string').length,1);
+ }
+});
