@@ -42,6 +42,7 @@ const byId=l=>{const m={};(l||[]).forEach(r=>m[pid(r.url)]=r);return m};
 function tabsUI(){tabs.innerHTML=TABS.map(([k,l])=>`<a href="#${k}" data-k="${k}" class="${S.tab===k?"on":""}">${l}</a>`).join("");companies.innerHTML=COMPANIES.map(c=>`<button class="pill ${S.co===c?"on":""}" data-co="${esc(c)}">${esc(c)}</button>`).join("");document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===S.tab))}
 tabs.addEventListener("click",e=>{const a=e.target.closest("a");if(!a)return;e.preventDefault();S.tab=a.dataset.k;history.replaceState(null,"","#"+S.tab);render()});
 companies.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S.co=b.dataset.co;render()});
+const savedCompany=new URL(location.href).searchParams.get("company");if(COMPANIES.includes(savedCompany))S.co=savedCompany;
 const h0=location.hash.slice(1);if(TABS.some(t=>t[0]===h0))S.tab=h0;
 function live(id,ck){const last=ck.find(c=>rel(c.Agent).includes(id));if(!last)return{cls:"",label:"Not tested",color:"var(--gray)",last:null};const m=(Date.now()-new Date(last.Logged))/60000;
  if(last.Status==="CLOCK-OUT")return{cls:"",label:"Clocked out",color:"var(--gray)",last};if(last.Status==="BLOCKED")return{cls:"r",label:"Blocked",color:"var(--red)",last};
@@ -67,26 +68,50 @@ function render(){tabsUI();const A=S.data.agents||[],D=S.data.devices||[],P=S.da
  <details open><summary>🔥 FAT 20</summary>${F.length?`<div class="wrap"><table><tr><th>#</th><th>Item</th><th>Status</th><th>Progress</th></tr>${[...F].sort((a,b)=>(a.Rank||0)-(b.Rank||0)).map(f=>`<tr><td class="mono">${f.Rank??""}</td><td>${esc(f.Item)}</td><td>${esc(f.Status||"")}</td><td style="display:flex;gap:8px;align-items:center">${prog(f["Progress %"])}</td></tr>`).join("")}</table></div>`:`<div class="empty">FAT 20 empty.</div>`}</details>`;
  crons.innerHTML=`<h2>CRONs</h2>${R.length?`<div class="wrap"><table><tr><th>Routine</th><th>State</th><th>Cadence</th><th>Runs on</th><th>Defined in</th></tr>${R.map(r=>`<tr><td><b>${esc(r.Routine)}</b></td><td>${esc(r.State||"")}</td><td>${esc(r.Cadence||"")}</td><td>${esc(r["Runs on"]||"")}</td><td class="meta">${esc(r["Defined in"]||"")}</td></tr>`).join("")}</table></div>`:`<div class="empty">No routines.</div>`}`;}
 const SNAP=__SNAP__;const SNAP_AT="__AT__";Object.assign(S.data,SNAP);
-function freshness(){
- const age=(Date.now()-Date.parse(SNAP_AT))/60000;
- fresh.textContent="Snapshot · "+SNAP_AT+" · "+ago(SNAP_AT)+(age>20?" · STALE":"");
- fresh.style.color=age>20?"var(--red)":"var(--mute)";
+function snapshotAge(at){
+ const time=Date.parse(at),age=(Date.now()-time)/60000;
+ return Number.isFinite(time)&&age>=0?age:null;
 }
+function freshness(){
+ const age=snapshotAge(SNAP_AT);
+ const label=age==null?"INVALID TIMESTAMP":age>20?"STALE":"";
+ fresh.textContent="Snapshot · "+SNAP_AT+(age==null?"":" · "+ago(SNAP_AT))+(label?" · "+label:"");
+ fresh.style.color=age==null||age>20?"var(--red)":"var(--mute)";
+}
+let refreshInFlight=false;
 async function refreshSnapshot(){
- if(document.hidden)return;
+ if(document.hidden||refreshInFlight)return;
+ refreshInFlight=true;
  try{
   const response=await fetch("version.json?at="+Date.now(),{cache:"no-store"});
   if(!response.ok)return;
   const version=await response.json();
-  if(Date.parse(version.built_at)>Date.parse(SNAP_AT)){
-   const url=new URL(location.href);url.searchParams.set("snapshot",version.built_at);
-   location.replace(url.href);
-  }
+  const next=Date.parse(version.built_at),current=Date.parse(SNAP_AT);
+  if(snapshotAge(version.built_at)==null||!Number.isFinite(current)||next<=current)return;
+  const url=new URL(location.href);
+  // A newer manifest with cached old HTML gets one reload per version, not a loop.
+  if(Date.parse(url.searchParams.get("snapshot"))>=next)return;
+  const key="dashboard-refresh:"+url.pathname;
+  try{
+   if(Date.parse(sessionStorage.getItem(key))>=next)return;
+   sessionStorage.setItem(key,version.built_at);
+  }catch{/* The URL guard still bounds reloads when browser storage is unavailable. */}
+  url.searchParams.set("snapshot",version.built_at);
+  url.searchParams.set("company",S.co);
+  location.replace(url.href);
  }catch{/* Keep the current snapshot and its visible age when offline. */}
+ finally{refreshInFlight=false}
+}
+function refreshView(){
+ const expanded=Array.from(document.querySelectorAll("details"),d=>d.open);
+ freshness();render();
+ document.querySelectorAll("details").forEach((d,i)=>{if(i<expanded.length)d.open=expanded[i]});
+ refreshSnapshot();
 }
 freshness();render();
-setInterval(()=>{freshness();render();refreshSnapshot()},60000);
-document.addEventListener("visibilitychange",()=>{if(!document.hidden){freshness();render();refreshSnapshot()}});
+setInterval(refreshView,60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshView()});
+
 </script>
 </body>
 </html>
