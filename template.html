@@ -26,7 +26,7 @@ details{background:var(--panel);border:1px solid var(--line);border-radius:10px;
 </style>
 </head>
 <body>
-<header><div class="kicker">AI CEO</div><h1>Bennett's command center</h1><div class="sub">Rebuilt from Notion every 10 minutes. Completion requires verified output.</div></header>
+<header><div class="kicker">AI CEO</div><h1>Bennett's command center</h1><div class="sub">Snapshots from Notion · refresh requested every 10 minutes. Completion requires verified output.</div></header>
 <nav><div class="tabs" id="tabs"></div></nav>
 <div class="bar"><div id="companies" style="display:flex;gap:6px;flex-wrap:wrap"></div><span class="fresh" id="fresh"></span></div>
 <main><div id="pagewarn"></div><section id="now"></section><section id="coceo"></section><section id="agents"></section><section id="devices"></section><section id="projects"></section><section id="tasks"></section><section id="caio"></section><section id="crons"></section></main>
@@ -67,7 +67,26 @@ function render(){tabsUI();const A=S.data.agents||[],D=S.data.devices||[],P=S.da
  <details open><summary>🔥 FAT 20</summary>${F.length?`<div class="wrap"><table><tr><th>#</th><th>Item</th><th>Status</th><th>Progress</th></tr>${[...F].sort((a,b)=>(a.Rank||0)-(b.Rank||0)).map(f=>`<tr><td class="mono">${f.Rank??""}</td><td>${esc(f.Item)}</td><td>${esc(f.Status||"")}</td><td style="display:flex;gap:8px;align-items:center">${prog(f["Progress %"])}</td></tr>`).join("")}</table></div>`:`<div class="empty">FAT 20 empty.</div>`}</details>`;
  crons.innerHTML=`<h2>CRONs</h2>${R.length?`<div class="wrap"><table><tr><th>Routine</th><th>State</th><th>Cadence</th><th>Runs on</th><th>Defined in</th></tr>${R.map(r=>`<tr><td><b>${esc(r.Routine)}</b></td><td>${esc(r.State||"")}</td><td>${esc(r.Cadence||"")}</td><td>${esc(r["Runs on"]||"")}</td><td class="meta">${esc(r["Defined in"]||"")}</td></tr>`).join("")}</table></div>`:`<div class="empty">No routines.</div>`}`;}
 const SNAP=__SNAP__;const SNAP_AT="__AT__";Object.assign(S.data,SNAP);
-fresh.textContent="Snapshot · "+SNAP_AT+" · rebuilt every 10 min";render();
+function freshness(){
+ const age=(Date.now()-Date.parse(SNAP_AT))/60000;
+ fresh.textContent="Snapshot · "+SNAP_AT+" · "+ago(SNAP_AT)+(age>20?" · STALE":"");
+ fresh.style.color=age>20?"var(--red)":"var(--mute)";
+}
+async function refreshSnapshot(){
+ if(document.hidden)return;
+ try{
+  const response=await fetch("version.json?at="+Date.now(),{cache:"no-store"});
+  if(!response.ok)return;
+  const version=await response.json();
+  if(Date.parse(version.built_at)>Date.parse(SNAP_AT)){
+   const url=new URL(location.href);url.searchParams.set("snapshot",version.built_at);
+   location.replace(url.href);
+  }
+ }catch{/* Keep the current snapshot and its visible age when offline. */}
+}
+freshness();render();
+setInterval(()=>{freshness();render();refreshSnapshot()},60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){freshness();render();refreshSnapshot()}});
 </script>
 </body>
 </html>
