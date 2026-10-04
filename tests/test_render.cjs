@@ -43,3 +43,15 @@ test('stale or incomplete device evidence is unavailable rather than absence',()
   assert.doesNotMatch(env.devices.innerHTML,/No recent validated receipt/);
  }
 });
+test('snapshot older than three minutes cannot show current-zero counters',()=>{
+ for(const at of ['2026-10-04T20:56:59.999Z','2026-10-04T20:53:00Z']){
+  const env=run(at);assert.match(env.now.innerHTML,/Live status unavailable/);
+  assert.match(env.now.innerHTML,/>–<\/b>/);assert.doesNotMatch(env.now.innerHTML,/>0<\/b><span>validated worker reports/);
+  assert.match(env.fresh.textContent,/STALE/);
+ }
+});
+test('project progress is reported and unverified while values stay intact',()=>{
+ const env=run('2026-10-04T21:00:00Z',true,data=>data.projects=[{url:'p',Project:'Test',Company:'Test','Progress %':0},{url:'q',Project:'Unknown','Progress %':null}]);
+ assert.match(env.now.innerHTML,/>0%<\/b><span>reported project progress · unverified/);
+ assert.doesNotMatch(env.now.innerHTML,/verified project/);assert.match(env.projects.innerHTML,/no plan yet/);
+});

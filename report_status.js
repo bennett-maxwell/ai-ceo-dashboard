@@ -1,6 +1,6 @@
 (function(root){
  "use strict";
- const WORKER_MAX_AGE_MS=3*60000,SNAPSHOT_MAX_AGE_MS=10*60000;
+ const WORKER_MAX_AGE_MS=3*60000,SNAPSHOT_MAX_AGE_MS=WORKER_MAX_AGE_MS;
  function time(value){
   if(typeof value!=="string")return null;
   const m=value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/);
