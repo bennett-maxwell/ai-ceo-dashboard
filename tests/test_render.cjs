@@ -1,0 +1,32 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm');
+const PRIMARY=['3edcf5514fd3812ea137d3ce41dafab3','3edcf5514fd381d7a91dd8a7bdcccb87','3edcf5514fd3816fb3a2cc308727bde6','3edcf5514fd38131bd00e1080bf6d826','3edcf5514fd381759f9bee1cfade7819','3edcf5514fd381ecb7a7f9c2f8411b1d'];
+const DOT='3edcf5514fd381c18e9ad31f16369f38';
+function run(at,complete=true){
+ const DateFixed=class extends Date{constructor(...args){super(...(args.length?args:['2026-10-04T21:00:00Z']))}static now(){return Date.parse('2026-10-04T21:00:00Z')}};
+ const element=()=>({innerHTML:'',textContent:'',style:{},addEventListener(){},classList:{toggle(){}}});
+ const ids=['now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
+ const env={Date:DateFixed,URL,console,location:{href:'https://example.com/#agents',hash:'#agents',replace(){}},history:{replaceState(){}},document:{hidden:false,querySelectorAll:s=>s==='section'?sections:[],addEventListener(){}},setInterval:(f,ms)=>env.interval=ms,fetch:async()=>({ok:false}),sessionStorage:{getItem(){return null},setItem(){}}};
+ ids.forEach((id,i)=>env[id]=sections[i]);['tabs','companies','fresh'].forEach(id=>env[id]=element());
+ const data={primary_agents:PRIMARY,agents:[...PRIMARY,DOT].map((url,i)=>({url,Agent:i===6?'Dot':i===0?'Dash':i===4?'Grok ST':'Seat'+i,Projects:[],Device:[]})),devices:[],projects:[],checkins:[],report_coverage:{exhaustive:complete,unique_rows:230,unlinked_rows:1,per_agent:{}}};
+ PRIMARY.forEach(id=>data.report_coverage.per_agent[id]={agent_id:id,included:true,exhaustive:complete,matching_rows:0,latest:null});
+ const logged=Date.parse(at)<Date.parse('2026-10-04T20:59:30Z')?'2026-10-04T19:29:30Z':'2026-10-04T20:59:30Z';
+ data.report_coverage.per_agent[PRIMARY[0]].latest={url:'dash-row',Agent:[PRIMARY[0]],Logged:logged,Time:'2026-10-05T02:59:00Z',Device:[],Project:[]};
+ data.report_coverage.per_agent[PRIMARY[4]].latest={url:'grok-row',Agent:[PRIMARY[4]],Logged:'2026-10-02T23:10:00Z',Time:'2026-10-02T23:09:00Z',Device:[],Project:[]};
+ data.report_coverage.per_agent[DOT]={agent_id:DOT,included:true,exhaustive:complete,matching_rows:1,latest:{url:'dot-row',Agent:[DOT],Logged:'2026-10-04T20:59:30Z',Time:'2026-10-04T20:59:00Z'}};
+ let source=fs.readFileSync('template.html','utf8').replace('__REPORT_STATUS__',fs.readFileSync('report_status.js','utf8')).replace('__AT__',at).replace('__SNAP__',JSON.stringify(data));
+ const script=source.match(/<script>([\s\S]*?)<\/script>/)[1];vm.createContext(env);vm.runInContext(script,env);return env;
+}
+test('stale full rendered board uses unavailable counts, not zero alive',()=>{
+ const env=run('2026-10-04T19:30:35Z');assert.match(env.now.innerHTML,/Live status unavailable/);assert.match(env.now.innerHTML,/>–<\/b>/);assert.doesNotMatch(env.now.innerHTML,/agents alive|dead or blocked|never checked in/i);assert.equal(env.interval,60000);
+ assert.match(env.agents.innerHTML,/Logged \(server\)/);assert.match(env.agents.innerHTML,/Time \(worker\)/);assert.match(env.agents.innerHTML,/future — unverified/);
+});
+test('fresh rendered board retains primary denominator and recovered Grok history',()=>{
+ const env=run('2026-10-04T21:00:00Z');assert.match(env.agents.innerHTML,/Primary worker seats \(6\)/);assert.match(env.agents.innerHTML,/Additional registered agents \(1\)/);
+ assert.match(env.now.innerHTML,/>0<\/b><span>validated worker reports/);assert.match(env.now.innerHTML,/>1<\/b><span>recent server receipts/);
+ assert.match(env.agents.innerHTML,/2026-10-02T23:10:00Z/);assert.match(env.agents.innerHTML,/Never observed as of exhaustive/);assert.match(env.agents.innerHTML,/Unknown project\/task relation/);
+});
+test('incomplete source coverage cannot become authoritative zero',()=>{
+ const env=run('2026-10-04T21:00:00Z',false);assert.match(env.now.innerHTML,/source coverage is incomplete/);assert.match(env.now.innerHTML,/>–<\/b>/);assert.match(env.agents.innerHTML,/Not included — coverage unknown/);
+});

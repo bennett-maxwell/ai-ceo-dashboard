@@ -10,7 +10,7 @@ PUBLIC_FIELDS = {
     "agents": ("Agent", "Status", "Platform", "Role", "Device", "Projects"),
     "devices": ("Device", "Type"),
     "projects": ("Project", "Company", "Status", "Progress %", "Last %", "Finish condition"),
-    "checkins": ("Agent", "Logged", "Status", "Doing now", "Project", "Proof", "Device", "Blocker question"),
+    "checkins": ("Agent", "Logged", "Time", "Status", "Doing now", "Project", "Proof", "Device", "Blocker question"),
     "crons": ("Routine", "State", "Cadence", "Runs on", "Defined in"),
     "caio": ("Division", "Status", "Covers", "Projects", "Order"),
     "fat20": ("Rank", "Item", "Status", "Progress %"),
@@ -19,7 +19,7 @@ PUBLIC_FIELDS = {
 }
 
 def q(i, body, limit=None):
-    out, cur = [], None
+    out, cur, seen_cursors = [], None, set()
     while True:
         size = min(100, limit - len(out)) if limit else 100
         b = dict(body, page_size=size, **({"start_cursor": cur} if cur else {}))
@@ -33,8 +33,9 @@ def q(i, body, limit=None):
         if not d.get("has_more") or (limit and len(out) >= limit):
             return out[:limit] if limit else out
         next_cur = d.get("next_cursor")
-        if not next_cur or next_cur == cur:
+        if not next_cur or next_cur in seen_cursors:
             raise ValueError("Notion pagination did not advance")
+        seen_cursors.add(next_cur)
         cur = next_cur
 
 def val(p):
@@ -58,17 +59,65 @@ def rows(k, body=None, limit=None):
         res.append(r)
     return res
 
+PRIMARY_AGENT_IDS = (
+    "3edcf5514fd3812ea137d3ce41dafab3", "3edcf5514fd381d7a91dd8a7bdcccb87",
+    "3edcf5514fd3816fb3a2cc308727bde6", "3edcf5514fd38131bd00e1080bf6d826",
+    "3edcf5514fd381759f9bee1cfade7819", "3edcf5514fd381ecb7a7f9c2f8411b1d",
+)
+
+def timestamp(value):
+    if not isinstance(value, str) or "T" not in value:
+        return None
+    try:
+        parsed = datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo is not None else None
+    except ValueError:
+        return None
+
+def report_coverage(reports, agents, devices, projects):
+    # Scan to exhaustion before limiting the activity feed. Never infer absence from a cap.
+    unique = {r["url"]: r for r in reports}
+    source_rows = sorted(unique.values(), key=lambda r: (timestamp(r.get("Logged")) or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc), r["url"]), reverse=True)
+    known_agents = {a["url"] for a in agents}
+    known_devices = {d["url"] for d in devices}
+    known_projects = {p["url"] for p in projects}
+    per_agent = {}
+    for agent_id in known_agents | set(PRIMARY_AGENT_IDS):
+        linked = [r for r in source_rows if agent_id in (r.get("Agent") or [])]
+        latest = linked[0] if linked else None
+        valid_older = [timestamp(r.get("Time")) for r in linked[1:]
+                       if timestamp(r.get("Time")) is not None and timestamp(r.get("Logged")) is not None
+                       and timestamp(r.get("Time")) <= timestamp(r.get("Logged"))]
+        worker_time = timestamp(latest.get("Time")) if latest else None
+        latest_replayed = bool(worker_time and valid_older and worker_time <= max(valid_older))
+        per_agent[agent_id] = {"agent_id": agent_id, "included": agent_id in known_agents,
+                               "exhaustive": True, "matching_rows": len(linked),
+                               "latest": latest, "latest_replayed": latest_replayed}
+    return source_rows, {"source": DB["checkins"], "exhaustive": True,
+                         "rows_scanned": len(reports), "unique_rows": len(unique),
+                         "duplicate_row_ids": len(reports)-len(unique),
+                         "unlinked_rows": sum(not r.get("Agent") for r in source_rows),
+                         "unknown_agent_links": sum(i not in known_agents for r in source_rows for i in (r.get("Agent") or [])),
+                         "unknown_device_links": sum(i not in known_devices for r in source_rows for i in (r.get("Device") or [])),
+                         "unknown_project_links": sum(i not in known_projects for r in source_rows for i in (r.get("Project") or [])),
+                         "per_agent": per_agent}
+
 def snapshot():
     new = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
     snap = {k: rows(k) for k in DB if k not in ("checkins", "tasks", "coceo")}
-    snap["checkins"] = rows("checkins", new, 200)
+    all_reports = rows("checkins", new)
+    reports, coverage = report_coverage(all_reports, snap["agents"], snap["devices"], snap["projects"])
+    snap["checkins"] = reports[:200]
+    snap["report_coverage"] = coverage
+    snap["primary_agents"] = list(PRIMARY_AGENT_IDS)
     snap["coceo"] = rows("coceo", new, 60)
     snap["tasks"] = rows("tasks", {"filter": {"property": "Status", "select": {"does_not_equal": "🟢 Done"}}}, 80)
     return snap
 
 def render(snap, at):
     data = json.dumps(snap, ensure_ascii=False).replace("</", "<\\/")
-    return Path("template.html").read_text().replace("__SNAP__", data).replace("__AT__", at)
+    return (Path("template.html").read_text().replace("__REPORT_STATUS__", Path("report_status.js").read_text())
+            .replace("__AT__", at).replace("__SNAP__", data))
 
 def main():
     snap = snapshot()
@@ -77,7 +126,7 @@ def main():
     site.mkdir(exist_ok=True)
     (site / "index.html").write_text(render(snap, at))
     (site / "version.json").write_text(json.dumps({"built_at": at}))
-    print("built", {k: len(v) for k, v in snap.items()}, "at", at)
+    print("built", {k: len(v) for k, v in snap.items() if isinstance(v, list)}, "at", at)
 
 if __name__ == "__main__":
     main()

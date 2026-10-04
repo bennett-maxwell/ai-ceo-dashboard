@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 -m unittest discover -s tests -v
-      - run: node --test tests/test_refresh.cjs
+      - run: node --test tests/*.cjs
       - run: python3 build.py
         env: {NOTION_TOKEN: "${{ secrets.NOTION_TOKEN }}"}
       - uses: actions/upload-pages-artifact@v3
