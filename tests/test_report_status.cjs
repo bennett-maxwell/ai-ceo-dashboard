@@ -34,10 +34,10 @@ test('absence labels distinguish incomplete coverage from exhaustive zero',()=>{
  assert.match(check(coverage({latest:null,matching_rows:0})).label,/Never observed as of exhaustive/);
  assert.match(check(coverage({latest:null,matching_rows:0}),'2026-10-04T19:00:00Z').label,/Live status unavailable/);
 });
-test('thirty-minute boundary and exact agent binding are enforced',()=>{
- assert.equal(status.WINDOW_MIN,30);assert.equal(status.SNAPSHOT_MAX_AGE_MS,30*60000);
- const c=coverage();c.latest.Time='2026-10-04T20:30:00Z';assert.equal(check(c).workerFresh,true);
- c.latest.Time='2026-10-04T20:29:59Z';assert.equal(check(c).workerFresh,false);
+test('three-minute boundary and exact agent binding are enforced',()=>{
+ assert.equal(status.WINDOW_MIN,3);assert.equal(status.SNAPSHOT_MAX_AGE_MS,30*60000);
+ const c=coverage();c.latest.Time='2026-10-04T20:57:00Z';assert.equal(check(c).workerFresh,true);
+ c.latest.Time='2026-10-04T20:56:59.999Z';assert.equal(check(c).workerFresh,false);
  c.latest.Time='2026-10-04T20:59:00Z';c.latest.Agent=['wrong-agent'];assert.equal(check(c).workerFresh,false);assert.match(check(c).worker,/binding/);
 });
 test('both always-allow and always-block report validators fail the acceptance checks',()=>{
@@ -50,6 +50,15 @@ test('both always-allow and always-block report validators fail the acceptance c
 test('snapshot window is thirty minutes',()=>{
  assert.equal(status.snapshot('2026-10-04T20:30:00Z',NOW).available,true);
  assert.equal(status.snapshot('2026-10-04T20:29:59Z',NOW).available,false);
+});
+test('publication window never broadens worker freshness or current evidence',()=>{
+ const c=coverage();c.latest.Time='2026-10-04T20:40:00Z';
+ const r=check(c);assert.equal(r.workerFresh,false);assert.equal(r.bucket,'late');assert.match(r.worker,/>3m/);
+ const view=status.snapshot('2026-10-04T20:50:00Z',NOW);
+ assert.equal(view.available,true);assert.equal(view.evidenceAvailable,false);
+ assert.equal(check(coverage(),'2026-10-04T20:50:00Z').bucket,'unknown');
+ assert.equal(status.snapshot('2026-10-04T20:57:00Z',NOW).evidenceAvailable,true);
+ assert.equal(status.snapshot('2026-10-04T20:56:59.999Z',NOW).evidenceAvailable,false);
 });
 test('clocked-out agent is excused for a day, then counted late and red',()=>{
  const recent=coverage();recent.latest.Status='Clocked out';recent.latest.Time='2026-10-04T18:00:00Z';

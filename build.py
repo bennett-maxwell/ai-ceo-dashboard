@@ -195,6 +195,9 @@ def snapshot():
     all_tasks = rows("tasks")
     snap["tasks"] = [t for t in all_tasks if not is_done(t.get("Status"))]
     snap["aiceo"], snap["aiceo_status"] = aiceo_rows()
+    aiceo_read = snap["aiceo_status"] == f"{len(snap['aiceo'])} rows read"
+    snap["aiceo_coverage"] = {"state": ("available" if snap["aiceo"] else "empty") if aiceo_read else "unavailable",
+                              "exhaustive": aiceo_read, "public_rows": len(snap["aiceo"]) if aiceo_read else None}
     snap["counts"] = {"agents": len(snap["agents"]), "tasks_total": len(all_tasks), "tasks_open": len(snap["tasks"]),
                       "checkins": coverage["unique_rows"], "checkins_feed_rows": len(feed), "aiceo": len(snap["aiceo"])}
     return snap

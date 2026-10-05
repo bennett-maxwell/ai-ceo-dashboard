@@ -73,3 +73,15 @@ test('collapsed heartbeat rows show their repeat count',()=>{
  const env=run('2026-10-04T21:00:00Z',true,data=>{data.checkins=[{url:'c1',Agent:[PRIMARY[0]],Logged:'2026-10-04T20:59:30Z',Time:'2026-10-04T20:59:00Z','Doing now':'Heartbeat',_repeats:12,_first_logged:'2026-10-04T20:30:00Z'}];data.report_coverage.collapsed_repeats=11});
  assert.match(env.now.innerHTML+env.agents.innerHTML,/×12 identical reports since 2026-10-04T20:30:00Z/);
 });
+test('ten-minute publication age cannot substantiate current three-minute counters',()=>{
+ const env=run('2026-10-04T20:50:00Z');
+ assert.match(env.now.innerHTML,/cannot substantiate current three-minute worker evidence/);
+ assert.doesNotMatch(env.now.innerHTML,/>0<\/b><span>validated worker reports/);
+ assert.match(env.now.innerHTML,/>–<\/b>/);
+});
+test('AI CEO unavailable coverage is visible and never presented as an empty board',()=>{
+ const env=run('2026-10-04T21:00:00Z',true,data=>{data.aiceo=[];data.aiceo_coverage={state:'unavailable',exhaustive:false,public_rows:null};data.aiceo_status='AI CEO board not readable with the build token (HTTP 404); not published.'});
+ assert.match(env.caio.innerHTML,/source coverage unavailable/);
+ assert.match(env.caio.innerHTML,/zero rows must not be interpreted as an empty source/);
+ assert.match(env.caio.innerHTML,/HTTP 404/);
+});

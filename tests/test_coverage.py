@@ -4,6 +4,13 @@ from unittest.mock import patch
 import build
 
 class CoverageTests(unittest.TestCase):
+    def test_unreadable_source_is_unknown_not_zero_and_empty_read_is_distinct(self):
+        for rows,status,expected in [([], 'AI CEO board not readable with the build token (HTTP 404); not published.', 'unavailable'),([], '0 rows read', 'empty'),([{'url':'safe'}], '1 rows read', 'available')]:
+            with patch.object(build,'rows',return_value=[]),patch.object(build,'aiceo_rows',return_value=(rows,status)):
+                result=build.snapshot()['aiceo_coverage']
+            self.assertEqual(result['state'],expected)
+            self.assertEqual(result['exhaustive'],expected!='unavailable')
+            self.assertEqual(result['public_rows'],None if expected=='unavailable' else len(rows))
     def report(self,i,agent='dash',logged='2026-10-04T20:59:30Z',time='2026-10-04T20:59:00Z'):
         return {'url':str(i),'Agent':[agent],'Device':['device'],'Project':None,'Logged':logged,'Time':time}
     def coverage(self,reports):
