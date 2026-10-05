@@ -1,0 +1,10 @@
+# Notion page ids kept off the public dashboard: one id per line, dashes optional, '#' starts a comment.
+# build.py drops each listed row from every section, plus any link to it, before anything is written to site/.
+# The Notion rows themselves are untouched. Ids only here; never put row titles or reasons in this file.
+3e5cf5514fd381cdbe13f04a6f2cd8e2
+3e5cf5514fd3816b97c1cf3b3dce617b
+3e5cf5514fd3813eb204c3eadcdd5f91
+3e5cf5514fd3817b9918f352c6994bcd
+3e5cf5514fd381bca9b0fcfb6878de8d
+3e5cf5514fd381f1b8acf6da8cc39dc2
+3e4cf5514fd3813aa54af63a0f2d317b

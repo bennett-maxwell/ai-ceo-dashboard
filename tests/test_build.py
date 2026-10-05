@@ -1,6 +1,10 @@
+from contextlib import redirect_stdout
 import io
 import json
 import os
+from pathlib import Path
+import shutil
+import tempfile
 import unittest
 from unittest.mock import patch
 import urllib.error
@@ -115,5 +119,45 @@ class ScrubTests(unittest.TestCase):
             self.assertEqual(out['x'], 'the [private] file'); self.assertEqual(hits, 1)
         finally:
             os.unlink(f.name)
+
+class ExcludeTests(unittest.TestCase):
+    ROOT = Path(build.__file__).resolve().parent
+    def forms(self, i):
+        return (i, f'{i[:8]}-{i[8:12]}-{i[12:16]}-{i[16:20]}-{i[20:]}')
+    def test_committed_list_is_seven_dash_stripped_ids(self):
+        ids = build.excluded_ids(self.ROOT / 'public-exclude.txt')
+        self.assertEqual(len(ids), 7)
+        for i in ids: self.assertRegex(i, r'^[0-9a-f]{32}$')
+        self.assertIn('3e5cf5514fd381cdbe13f04a6f2cd8e2', ids); self.assertIn('3e4cf5514fd3813aa54af63a0f2d317b', ids)
+    def test_missing_or_malformed_list_stops_the_build(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(SystemExit): build.excluded_ids(Path(d, 'absent.txt'))
+            Path(d, 'bad.txt').write_text('# comment\nnot-an-id\n')
+            with self.assertRaises(SystemExit): build.excluded_ids(Path(d, 'bad.txt'))
+            Path(d, 'ok.txt').write_text('# comment\n\n3E5CF551-4FD3-81CD-BE13-F04A6F2CD8E2  # dashed, upper\n')
+            self.assertEqual(build.excluded_ids(Path(d, 'ok.txt')), {'3e5cf5514fd381cdbe13f04a6f2cd8e2'})
+    def test_excluded_ids_never_reach_the_published_site(self):
+        ids = sorted(build.excluded_ids(self.ROOT / 'public-exclude.txt'))
+        keep = '0123456789abcdef0123456789abcdef'
+        snap = {'tasks': [{'url': keep, 'Name': 'Public task'}] + [{'url': self.forms(i)[n % 2], 'Name': f'PRIVATE_ROW_{n}'} for n, i in enumerate(ids)],
+                'agents': [{'url': 'agent', 'Agent': 'A', 'Projects': [keep, ids[0]]}],
+                'checkins': [{'url': 'c1', 'Agent': ['agent'], 'Project': [self.forms(ids[1])[1]], 'Doing now': 'closed ' + self.forms(ids[2])[1].upper()}],
+                'report_coverage': {'per_agent': {'agent': {'agent_id': 'agent', 'latest': {'url': ids[4]}}, ids[3]: {'agent_id': ids[3]}}},
+                'primary_agents': [ids[5]], 'counts': {}, 'aiceo_status': '0 rows read'}
+        with tempfile.TemporaryDirectory() as d:
+            for f in ('template.html', 'report_status.js', 'public-exclude.txt'): shutil.copy(self.ROOT / f, d)
+            cwd = os.getcwd(); os.chdir(d)
+            try:
+                with patch.object(build, 'snapshot', return_value=snap), patch.dict(os.environ, {'SCRUB_TERMS': '', 'REQUIRE_SCRUB_TERMS': '0'}), redirect_stdout(io.StringIO()) as out:
+                    build.main()
+                site = ''.join(p.read_text() for p in sorted(Path(d, 'site').iterdir()))
+            finally:
+                os.chdir(cwd)
+        for i in ids:
+            for form in self.forms(i):
+                self.assertNotIn(form, site.lower())
+        self.assertNotIn('PRIVATE_ROW_', site)
+        self.assertIn(keep, site); self.assertIn('Public task', site)
+        self.assertIn(f'exclude: ids={len(ids)} dropped={len(ids)}', out.getvalue())
 
 if __name__=='__main__': unittest.main()

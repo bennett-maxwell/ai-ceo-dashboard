@@ -243,14 +243,57 @@ def scrub(snap, terms=None):
         return v
     return walk(snap), hits
 
+# Rows kept off the public page by Notion page id: public-exclude.txt holds one id per line (dashes optional,
+# '#' starts a comment). The Notion rows themselves are untouched. A missing or malformed list stops the build.
+EXCLUDE_FILE = "public-exclude.txt"
+
+def norm_id(s):
+    return str(s).strip().lower().replace("-", "")
+
+def excluded_ids(path=EXCLUDE_FILE):
+    p = Path(path)
+    if not p.is_file():
+        raise SystemExit(f"exclude: {path} missing; refusing to publish without it")
+    ids = {norm_id(line.split("#", 1)[0]) for line in p.read_text().splitlines()} - {""}
+    bad = [i for i in ids if not ID_RE.fullmatch(i)]
+    if bad:
+        raise SystemExit(f"exclude: {len(bad)} malformed id line(s) in {path}")
+    return ids
+
+def exclude(snap, ids):
+    """Return (copy without listed rows, dropped row count). A list item whose url is listed is dropped from
+    every section, a listed id in a relation list is removed, a dict value pointing at a listed row becomes None,
+    and any other mention of a listed id (dashed or not) is replaced, so no listed id reaches the page."""
+    if not ids:
+        return snap, 0
+    id_re = re.compile("|".join(f"{i[:8]}-?{i[8:12]}-?{i[12:16]}-?{i[16:20]}-?{i[20:]}" for i in sorted(ids)), re.IGNORECASE)
+    dropped = 0
+    def listed(v):
+        if isinstance(v, dict):
+            return norm_id(v.get("url") or "") in ids
+        return isinstance(v, str) and norm_id(v) in ids
+    def walk(v):
+        nonlocal dropped
+        if isinstance(v, str):
+            return id_re.sub("[excluded]", v)
+        if isinstance(v, list):
+            dropped += sum(isinstance(x, dict) and listed(x) for x in v)
+            return [walk(x) for x in v if not listed(x)]
+        if isinstance(v, dict):
+            return {walk(k): (None if listed(x) else walk(x)) for k, x in v.items() if not listed(k)}
+        return v
+    return walk(snap), dropped
+
 def render(snap, at):
     data = json.dumps(snap, ensure_ascii=False).replace("</", "<\\/")
     return (Path("template.html").read_text().replace("__REPORT_STATUS__", Path("report_status.js").read_text())
             .replace("__AT__", at).replace("__SNAP__", data))
 
 def main():
-    terms = scrub_terms()
-    snap, hits = scrub(snapshot(), terms)
+    terms, ids = scrub_terms(), excluded_ids()
+    snap, dropped = exclude(snapshot(), ids)
+    print(f"exclude: ids={len(ids)} dropped={dropped}")
+    snap, hits = scrub(snap, terms)
     print(f"scrub: terms_loaded={len(terms)} replaced={hits}")
     at = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
     site = Path("site")
