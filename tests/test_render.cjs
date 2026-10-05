@@ -84,4 +84,6 @@ test('AI CEO unavailable coverage is visible and never presented as an empty boa
  assert.match(env.caio.innerHTML,/source coverage unavailable/);
  assert.match(env.caio.innerHTML,/zero rows must not be interpreted as an empty source/);
  assert.match(env.caio.innerHTML,/HTTP 404/);
+ assert.match(env.caio.innerHTML,/Historical AI CEO coverage/);
+ assert.match(env.caio.innerHTML,/legacy Plan\/Audit\/Run history, separate from the current command-center hub/);
 });

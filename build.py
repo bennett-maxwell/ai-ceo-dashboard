@@ -155,19 +155,55 @@ def collapse_heartbeats(rows_desc):
 def is_done(status):
     return re.sub(r"^[^A-Za-z]+", "", str(status or "")).strip().lower() == "done"
 
-def aiceo_rows():
-    """Read the AI CEO board with the same token; publish only AICEO_FIELDS. Never fail the build over it."""
+def source_error(route, error):
+    """Only bounded status metadata leaves an HTTP failure; never raw body or message."""
+    record = {"route": route, "status": None, "error_code": "transport_error", "request_id": None}
+    if not isinstance(error, urllib.error.HTTPError):
+        return record
+    record["status"] = error.code
+    allowed = {"invalid_json", "invalid_request_url", "invalid_request", "validation_error",
+               "missing_version", "unauthorized", "restricted_resource", "object_not_found",
+               "conflict_error", "rate_limited", "internal_server_error", "bad_gateway",
+               "service_unavailable", "database_connection_unavailable", "gateway_timeout"}
+    record["error_code"] = "unknown_http_error"
+    headers = error.headers or {}
+    request_id = headers.get("x-request-id") or headers.get("X-Request-Id")
+    try:
+        body = json.loads(error.read(4096))
+        if isinstance(body, dict):
+            if body.get("code") in allowed:
+                record["error_code"] = body["code"]
+            request_id = request_id or body.get("request_id")
+    except (ValueError, OSError, AttributeError, TypeError):
+        pass
+    if isinstance(request_id, str) and re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", request_id):
+        record["request_id"] = request_id
+    return record
+
+def aiceo_rows(diagnostics=None):
+    """Historical Plan/Audit/Run coverage; separate from the current command-center hub."""
+    diagnostics = diagnostics if diagnostics is not None else []
     try:
         try:
             pages = q(DATA_SOURCES["aiceo"], {}, route="data_sources", version="2025-09-03")
+            diagnostics.append({"route": "data_sources", "status": 200, "error_code": None, "request_id": None})
         except urllib.error.HTTPError as e:
+            diagnostics.append(source_error("data_sources", e))
             if e.code not in (400, 404):
                 raise
-            pages = q(AICEO_DB, {})
+            try:
+                pages = q(AICEO_DB, {})
+                diagnostics.append({"route": "databases", "status": 200, "error_code": None, "request_id": None})
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as fallback:
+                diagnostics.append(source_error("databases", fallback))
+                raise
+        except (urllib.error.URLError, TimeoutError, ValueError) as e:
+            diagnostics.append(source_error("data_sources", e))
+            raise
     except urllib.error.HTTPError as e:
-        return [], f"AI CEO board not readable with the build token (HTTP {e.code}); not published."
+        return [], f"Historical AI CEO coverage not readable with the build connection (HTTP {e.code}); not published."
     except (urllib.error.URLError, TimeoutError, ValueError) as e:
-        return [], f"AI CEO board read failed ({type(e).__name__}); not published."
+        return [], "Historical AI CEO coverage read failed; not published."
     out = []
     for pg in pages:
         props = pg.get("properties", {})
@@ -194,7 +230,9 @@ def snapshot():
     snap["coceo"] = rows("coceo", new, 60)
     all_tasks = rows("tasks")
     snap["tasks"] = [t for t in all_tasks if not is_done(t.get("Status"))]
-    snap["aiceo"], snap["aiceo_status"] = aiceo_rows()
+    aiceo_diagnostics = []
+    snap["aiceo"], snap["aiceo_status"] = aiceo_rows(aiceo_diagnostics)
+    print("historical_aiceo_routes:", json.dumps(aiceo_diagnostics, sort_keys=True))
     aiceo_read = snap["aiceo_status"] == f"{len(snap['aiceo'])} rows read"
     snap["aiceo_coverage"] = {"state": ("available" if snap["aiceo"] else "empty") if aiceo_read else "unavailable",
                               "exhaustive": aiceo_read, "public_rows": len(snap["aiceo"]) if aiceo_read else None}

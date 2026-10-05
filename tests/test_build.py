@@ -57,6 +57,34 @@ class BuildTests(unittest.TestCase):
         with patch.object(build, 'q', side_effect=[err, urllib.error.HTTPError('fixture', 403, 'Forbidden', {}, None)]):
             rows, status = build.aiceo_rows()
         self.assertEqual(rows, []); self.assertIn('HTTP 403', status)
+    def test_historical_diagnostics_preserve_both_routes_without_private_body(self):
+        rid='12345678-1234-1234-1234-123456789abc'
+        body=lambda code:io.BytesIO(json.dumps({'code':code,'request_id':rid,'message':'SECRET_PRIVATE_TITLE','token':'SECRET_TOKEN'}).encode())
+        errors=[urllib.error.HTTPError('private-url',400,'PRIVATE_REASON',{},body('validation_error')),
+                urllib.error.HTTPError('private-url',404,'PRIVATE_REASON',{},body('object_not_found'))]
+        diagnostics=[]
+        with patch.object(build,'q',side_effect=errors):rows,status=build.aiceo_rows(diagnostics)
+        self.assertEqual(rows,[]);self.assertIn('Historical',status)
+        self.assertEqual([r['route'] for r in diagnostics],['data_sources','databases'])
+        self.assertEqual([r['status'] for r in diagnostics],[400,404])
+        self.assertEqual([r['error_code'] for r in diagnostics],['validation_error','object_not_found'])
+        self.assertEqual(diagnostics[0]['request_id'],rid)
+        self.assertNotIn('SECRET',json.dumps(diagnostics));self.assertNotIn('PRIVATE',json.dumps(diagnostics))
+    def test_unknown_error_code_and_non_uuid_request_id_cannot_escape(self):
+        error=urllib.error.HTTPError('private',404,'secret',{'x-request-id':'SECRET_TOKEN'},io.BytesIO(b'{"code":"SECRET_TOKEN","message":"PRIVATE_TITLE"}'))
+        record=build.source_error('data_sources',error)
+        self.assertEqual(record['error_code'],'unknown_http_error');self.assertIsNone(record['request_id'])
+        self.assertNotIn('SECRET',json.dumps(record));self.assertNotIn('PRIVATE',json.dumps(record))
+    def test_fallback_success_and_transport_failure_have_separate_safe_diagnostics(self):
+        diagnostics=[]
+        with patch.object(build,'q',side_effect=[urllib.error.HTTPError('fixture',404,'no',{},None),[]]):
+            rows,status=build.aiceo_rows(diagnostics)
+        self.assertEqual(status,'0 rows read');self.assertEqual([r['status'] for r in diagnostics],[404,200])
+        diagnostics=[]
+        with patch.object(build,'q',side_effect=urllib.error.URLError('SECRET_REASON')):
+            rows,status=build.aiceo_rows(diagnostics)
+        self.assertEqual(len(diagnostics),1);self.assertEqual(diagnostics[0]['error_code'],'transport_error')
+        self.assertNotIn('SECRET',status+json.dumps(diagnostics))
     def test_query_route_and_version_are_explicit(self):
         page = dict(results=[1], has_more=False)
         with patch.dict(os.environ, NOTION_TOKEN='synthetic'), patch.object(build.urllib.request,'urlopen',return_value=io.BytesIO(json.dumps(page).encode())) as opened:
