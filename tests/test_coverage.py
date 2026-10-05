@@ -34,7 +34,12 @@ class CoverageTests(unittest.TestCase):
     def test_missing_links_explicit_and_primary_ids_not_name_inferred(self):
         r=self.report('missing');r['Agent']=None;r['Device']=['unknown'];r['Project']=['unknown']
         _,c=self.coverage([r]);self.assertEqual(c['unlinked_rows'],1);self.assertEqual(c['unknown_device_links'],1);self.assertEqual(c['unknown_project_links'],1)
-        self.assertEqual(len(build.PRIMARY_AGENT_IDS),6);self.assertNotIn('3edcf5514fd381c18e9ad31f16369f38',build.PRIMARY_AGENT_IDS)
+        self.assertEqual(len(build.PRIMARY_AGENT_IDS),6)
+        self.assertEqual(build.PRIMARY_AGENT_IDS, (
+            '3edcf5514fd381659d38cbb6d9a1a51a','3edcf5514fd38108b4f4e2d2e319ebe2',
+            '3edcf5514fd381c18e9ad31f16369f38','3edcf5514fd3815aa780ca4aff45c771',
+            '3edcf5514fd3812ea137d3ce41dafab3','3edcf5514fd381d7a91dd8a7bdcccb87'))
+        self.assertIn('3edcf5514fd381c18e9ad31f16369f38',build.PRIMARY_AGENT_IDS)
         self.assertNotIn('3edcf5514fd3811ebc43c50933e8a73b',build.PRIMARY_AGENT_IDS)
     def snap(self,reports,tasks=()):
         calls=[]
@@ -87,5 +92,29 @@ class CoverageTests(unittest.TestCase):
         with patch.object(build,'q',return_value=[page]):public=build.rows('checkins')
         _,c=self.coverage(public);self.assertFalse(c['exhaustive'])
         self.assertFalse(c['per_agent']['absent']['exhaustive']);self.assertEqual(c['truncated_agent_relation_rows'],1)
+    def test_empty_agent_relation_matches_title_prefix(self):
+        leo='3edcf5514fd38108b4f4e2d2e319ebe2'
+        row={'url':'leo1','Agent':None,'Check-in':'leo · 13:52 MT','Logged':'2026-10-04T20:59:30Z','Time':'2026-10-04T20:59:00Z'}
+        _,c=build.report_coverage([row],[{'url':leo,'Agent':'Leo'}],[],[])
+        self.assertEqual(c['per_agent'][leo]['matching_rows'],1)
+        self.assertEqual(c['per_agent'][leo]['matched_by'],'title')
+        self.assertEqual(c['per_agent'][leo]['latest']['url'],'leo1')
+        self.assertFalse(build.title_prefix_match('Dashboard tick','Dash'))
+        self.assertTrue(build.title_prefix_match('dot · 13:00','Dot'))
+    def test_finished_is_self_reported_until_another_seat_accepts(self):
+        rocky='3edcf5514fd381659d38cbb6d9a1a51a';hank='3edcf5514fd3815aa780ca4aff45c771'
+        finished={'url':'f1','Agent':[rocky],'Check-in':'Rocky · 13:00 MT','Status':'FINISHED','Logged':'2026-10-04T20:50:00Z','Doing now':'lane closed'}
+        accept={'url':'a1','Agent':[hank],'Check-in':'Hank · 13:10 MT','Status':'FINISHED','Logged':'2026-10-04T20:55:00Z','Doing now':'ACCEPT (Hank, independent)'}
+        agents=[{'url':rocky,'Agent':'Rocky'},{'url':hank,'Agent':'Hank'}]
+        self.assertEqual(build.finish_label(finished,[accept,finished],agents),'accepted')
+        self.assertEqual(build.finish_label(finished,[finished],agents),'self-reported')
+        self.assertEqual(build.finish_label(finished,[dict(accept,Agent=[rocky],**{})],agents),'self-reported')
+    def test_needs_bennett_keeps_blockers_and_accepts(self):
+        rows=[{'url':'b1','Agent':['dash'],'Blocker question':'Need a key','Doing now':'blocked','Logged':'2026-10-04T20:59:00Z'},
+              {'url':'a1','Agent':['hank'],'Blocker question':None,'Doing now':'ACCEPT the lane','Logged':'2026-10-04T20:58:00Z'},
+              {'url':'w1','Agent':['dot'],'Blocker question':'','Doing now':'working','Logged':'2026-10-04T20:57:00Z'}]
+        out=build.needs_bennett_rows(rows)
+        self.assertEqual([r['url'] for r in out],['b1','a1'])
+        self.assertEqual(out[0]['need'],'blocker');self.assertEqual(out[1]['need'],'approval')
 
 if __name__=='__main__':unittest.main()

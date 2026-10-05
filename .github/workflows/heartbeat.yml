@@ -1,9 +1,9 @@
 name: Dashboard heartbeat
-# Cloud dispatcher: asks dashboard.yml for a rebuild about every 10 minutes, then starts the next heartbeat.
+# Cloud dispatcher: asks dashboard.yml for a rebuild about every 5 minutes, then starts the next heartbeat.
 # GitHub's own cron is best-effort (observed hours apart), so it only reseeds the chain if it ever breaks.
 # Only one heartbeat runs at a time: the concurrency group keeps at most one waiting run, so chains never multiply.
 # Stop it any time with: gh workflow disable heartbeat.yml -R bennett-maxwell/ai-ceo-dashboard
-# It stops by itself at the run deadline below. It uses only the built-in workflow token.
+# It uses only the built-in workflow token. There is no calendar shutoff.
 on:
   workflow_dispatch: {}
   schedule: [{cron: "3,13,23,33,43,53 * * * *"}]
@@ -12,29 +12,21 @@ concurrency: {group: heartbeat, cancel-in-progress: false}
 jobs:
   tick:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      DEADLINE: "2026-10-07T00:00:00Z"
     steps:
-      - name: Stop after the run deadline
-        id: gate
-        run: |
-          if [ "$(date -u +%s)" -ge "$(date -u -d "$DEADLINE" +%s)" ]; then
-            echo "Past $DEADLINE: nothing to do."
-            echo "go=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "go=true" >> "$GITHUB_OUTPUT"
-          fi
       - name: Rebuild the dashboard
-        if: steps.gate.outputs.go == 'true'
         run: gh workflow run dashboard.yml --ref main
       # The wait and the next heartbeat still happen if the rebuild request fails, so one bad call never ends the
       # chain and never makes it spin fast. Cancelling this run by hand ends the chain.
-      - name: Wait about ten minutes
-        if: ${{ !cancelled() && steps.gate.outputs.go == 'true' }}
-        run: sleep 540
+      # Heartbeat run 37363519282 (2026-10-05 19:27Z) never started a step: Actions annotation
+      # "The job was not acquired by Runner of type hosted even after multiple attempts" after 15m
+      # (timeout-minutes was 15; runner_id 0; empty steps). The next heartbeat was never queued.
+      - name: Wait about four minutes
+        if: ${{ !cancelled() }}
+        run: sleep 240
       - name: Start the next heartbeat
-        if: ${{ !cancelled() && steps.gate.outputs.go == 'true' }}
+        if: ${{ !cancelled() }}
         run: gh workflow run heartbeat.yml --ref main

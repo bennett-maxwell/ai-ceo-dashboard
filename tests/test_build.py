@@ -26,7 +26,7 @@ class BuildTests(unittest.TestCase):
         self.assertNotIn('PRIVATE_SENTINEL', html)
         self.assertNotIn('Private note', html)
         self.assertIn('Visible <\\/script>', html)
-        for tab in ('now','coceo','agents','devices','projects','tasks','caio','crons'):
+        for tab in ('now','coceo','agents','devices','projects','tasks','caio','aiceo','crons'):
             self.assertIn(f'<section id="{tab}">', html)
         self.assertIn('<meta name="robots" content="noindex, nofollow">', html)
     def test_all_tables_have_explicit_allowlists(self):
@@ -92,6 +92,19 @@ class BuildTests(unittest.TestCase):
         req = opened.call_args.args[0]
         self.assertTrue(req.full_url.endswith('/v1/data_sources/fixture/query'))
         self.assertEqual(req.get_header('Notion-version'), '2025-09-03')
+    def test_data_source_hex_ids_are_dashed_to_avoid_404(self):
+        page = dict(results=[], has_more=False)
+        with patch.dict(os.environ, NOTION_TOKEN='synthetic'), patch.object(build.urllib.request,'urlopen',return_value=io.BytesIO(json.dumps(page).encode())) as opened:
+            build.q(build.DATA_SOURCES['aiceo'], {}, route='data_sources', version='2025-09-03')
+        req = opened.call_args.args[0]
+        self.assertTrue(req.full_url.endswith('/v1/data_sources/536e4532-90b7-4a50-83be-86567bb46f4c/query'))
+        self.assertEqual(build.notion_id('536e453290b74a5083be86567bb46f4c', 'data_sources'), '536e4532-90b7-4a50-83be-86567bb46f4c')
+        self.assertEqual(build.notion_id('536e453290b74a5083be86567bb46f4c', 'databases'), '536e453290b74a5083be86567bb46f4c')
+    def test_heartbeat_sleeps_four_minutes_and_has_no_deadline(self):
+        yml = Path(build.__file__).resolve().parent.joinpath('.github/workflows/heartbeat.yml').read_text()
+        self.assertIn('sleep 240', yml)
+        self.assertNotIn('DEADLINE', yml)
+        self.assertNotIn('2026-10-07', yml)
 
     def test_pagination_complete_and_timeout(self):
         pages = [dict(results=[1],has_more=True,next_cursor='next'), dict(results=[2],has_more=False)]
