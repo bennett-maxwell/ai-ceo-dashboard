@@ -176,6 +176,8 @@ def source_error(route, error):
             request_id = request_id or body.get("request_id")
     except (ValueError, OSError, AttributeError, TypeError):
         pass
+    finally:
+        error.close()
     if isinstance(request_id, str) and re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", request_id):
         record["request_id"] = request_id
     return record
