@@ -43,8 +43,8 @@ test('stale or incomplete device evidence is unavailable rather than absence',()
   assert.doesNotMatch(env.devices.innerHTML,/No recent validated receipt/);
  }
 });
-test('snapshot older than three minutes cannot show current-zero counters',()=>{
- for(const at of ['2026-10-04T20:56:59.999Z','2026-10-04T20:53:00Z']){
+test('snapshot older than thirty minutes cannot show current-zero counters',()=>{
+ for(const at of ['2026-10-04T20:29:59.999Z','2026-10-04T20:23:00Z']){
   const env=run(at);assert.match(env.now.innerHTML,/Live status unavailable/);
   assert.match(env.now.innerHTML,/>–<\/b>/);assert.doesNotMatch(env.now.innerHTML,/>0<\/b><span>validated worker reports/);
   assert.match(env.fresh.textContent,/STALE/);
@@ -54,4 +54,22 @@ test('project progress is reported and unverified while values stay intact',()=>
  const env=run('2026-10-04T21:00:00Z',true,data=>data.projects=[{url:'p',Project:'Test',Company:'Test','Progress %':0},{url:'q',Project:'Unknown','Progress %':null}]);
  assert.match(env.now.innerHTML,/>0%<\/b><span>reported project progress · unverified/);
  assert.doesNotMatch(env.now.innerHTML,/verified project/);assert.match(env.projects.innerHTML,/no plan yet/);
+});
+
+test('all registered agents land in buckets that add up, and silent clocked-out seats count late',()=>{
+ const env=run('2026-10-04T21:00:00Z',true,data=>{
+  data.report_coverage.per_agent[PRIMARY[1]].latest={url:'clk',Agent:[PRIMARY[1]],Logged:'2026-10-01T20:00:30Z',Time:'2026-10-01T20:00:00Z',Status:'CLOCK-OUT'};
+  data.counts={agents:7,tasks_total:56,tasks_open:47,checkins:1215,checkins_feed_rows:300};
+ });
+ const box=env.now.innerHTML.slice(env.now.innerHTML.indexOf('id="buckets"'));
+ const nums=[...box.matchAll(/<b[^>]*>(\d+)<\/b>/g)].slice(0,7).map(m=>+m[1]);
+ assert.match(env.now.innerHTML,/All registered agents \(7, retired excluded\)/);
+ assert.equal(nums.length,7);assert.equal(nums.reduce((a,b)=>a+b,0),7);
+ assert.ok(nums[3]>=1,'clocked-out seat silent 3 days must count late');
+ assert.match(env.now.innerHTML,/Buckets add up to 7/);
+ assert.match(env.now.innerHTML,/1215/);assert.match(env.tasks.innerHTML,/56 rows read from Notion/);
+});
+test('collapsed heartbeat rows show their repeat count',()=>{
+ const env=run('2026-10-04T21:00:00Z',true,data=>{data.checkins=[{url:'c1',Agent:[PRIMARY[0]],Logged:'2026-10-04T20:59:30Z',Time:'2026-10-04T20:59:00Z','Doing now':'Heartbeat',_repeats:12,_first_logged:'2026-10-04T20:30:00Z'}];data.report_coverage.collapsed_repeats=11});
+ assert.match(env.now.innerHTML+env.agents.innerHTML,/×12 identical reports since 2026-10-04T20:30:00Z/);
 });

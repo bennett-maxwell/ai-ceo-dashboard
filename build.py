@@ -3,9 +3,30 @@ import datetime
 import json
 import os
 from pathlib import Path
+import re
+import urllib.error
 import urllib.request
 
 DB = {"agents":"ceaee3c46bcb463891ea1c86e20bdf17","devices":"255af22f85d840709836a5187f407482","projects":"10edde1f306545a3bbfdb9f507d532ed","checkins":"d322e38bf5054e9a965d8696723d596e","crons":"1effc590f7824467bf114ac164d5cc0c","caio":"64223bb0677a4eb3bda557ebeb5b2579","fat20":"a0c83122aaa0410a8acc0b4a889b01f2","coceo":"96f47983f50d44e3bff55404c876e2e9","tasks":"1a757d42a2ae4cb3acdf7e2eff2e0841"}
+# Notion data source behind each database id (Command Center HUB 3edcf5514fd38180b7b5e780b12bcccc).
+# Tasks sit under page 3e4cf5514fd381b497f7e6aab1521c82. All ids are dash-stripped.
+DATA_SOURCES = {
+    "agents": "a2ee467b26574173b36edf538f6e35e3",
+    "devices": "d691854b83d449e8aac13b991805c239",
+    "projects": "2c75f5446d7c42eaa33f55747167624e",
+    "checkins": "adb5ca487d474f4e8ca72b449c91fa41",
+    "crons": "474e80b06e004a0db3738b1b6426696a",
+    "caio": "8f7f298cd6a84508adae96207c4d8d4c",
+    "fat20": "277b8c966cf041c7ab271917fd2044bb",
+    "coceo": "c1880491d8e743218fbc5299db8dfd5f",
+    "tasks": "e706e6d10f18481e998118c873469d87",
+    "aiceo": "536e453290b74a5083be86567bb46f4c",
+}
+# The AI CEO board is read through its data source; its database id is the fallback route.
+AICEO_DB = "fe2ecada96c74adfb196753abc4dfb12"
+# Row titles, dollar amounts and proof links on the AI CEO board are internal (customer names, cash figures),
+# so only these select/date fields are ever published from it.
+AICEO_FIELDS = ("Type", "Status", "Seat", "Graded by", "date:Date:start")
 PUBLIC_FIELDS = {
     "agents": ("Agent", "Status", "Platform", "Role", "Device", "Projects"),
     "devices": ("Device", "Type"),
@@ -18,15 +39,15 @@ PUBLIC_FIELDS = {
     "tasks": ("Focus", "Name", "Owner", "Status", "Progress %"),
 }
 
-def q(i, body, limit=None):
+def q(i, body, limit=None, route="databases", version="2022-06-28"):
     out, cur, seen_cursors = [], None, set()
     while True:
         size = min(100, limit - len(out)) if limit else 100
         b = dict(body, page_size=size, **({"start_cursor": cur} if cur else {}))
         r = urllib.request.Request(
-            f"https://api.notion.com/v1/databases/{i}/query", json.dumps(b).encode(),
+            f"https://api.notion.com/v1/{route}/{i}/query", json.dumps(b).encode(),
             {"Authorization": f"Bearer {os.environ['NOTION_TOKEN']}",
-             "Notion-Version": "2022-06-28", "Content-Type": "application/json"})
+             "Notion-Version": version, "Content-Type": "application/json"})
         with urllib.request.urlopen(r, timeout=30) as response:
             d = json.load(response)
         out.extend(d["results"])
@@ -111,17 +132,116 @@ def report_coverage(reports, agents, devices, projects, cutoff=None):
                          "unknown_project_links": sum(i not in known_projects for r in source_rows for i in (r.get("Project") or [])),
                          "per_agent": per_agent}
 
+def collapse_heartbeats(rows_desc):
+    """Fold consecutive identical reports from one agent (same Doing now and Status) into its newest row.
+
+    rows_desc must be newest first. Other agents' rows in between do not break a run, so a 2-minute
+    heartbeat flood from one agent cannot crowd every other agent out of the capped feed."""
+    out, last_by_agent = [], {}
+    for r in rows_desc:
+        agent = tuple(sorted(r.get("Agent") or []))
+        key = (" ".join(str(r.get("Doing now") or "").split()).lower(), str(r.get("Status") or "").upper())
+        prev = last_by_agent.get(agent)
+        if agent and prev is not None and prev[0] == key:
+            kept = prev[1]
+            kept["_repeats"] = kept.get("_repeats", 1) + 1
+            kept["_first_logged"] = r.get("Logged")
+            continue
+        kept = dict(r)
+        out.append(kept)
+        last_by_agent[agent] = (key, kept)
+    return out
+
+def is_done(status):
+    return re.sub(r"^[^A-Za-z]+", "", str(status or "")).strip().lower() == "done"
+
+def aiceo_rows():
+    """Read the AI CEO board with the same token; publish only AICEO_FIELDS. Never fail the build over it."""
+    try:
+        try:
+            pages = q(DATA_SOURCES["aiceo"], {}, route="data_sources", version="2025-09-03")
+        except urllib.error.HTTPError as e:
+            if e.code not in (400, 404):
+                raise
+            pages = q(AICEO_DB, {})
+    except urllib.error.HTTPError as e:
+        return [], f"AI CEO board not readable with the build token (HTTP {e.code}); not published."
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        return [], f"AI CEO board read failed ({type(e).__name__}); not published."
+    out = []
+    for pg in pages:
+        props = pg.get("properties", {})
+        r = {"url": pg["id"].replace("-", "")}
+        for name in AICEO_FIELDS:
+            if name == "date:Date:start":
+                p = props.get(name) or props.get("Date")
+                r["Date"] = val(p) if p else None
+            else:
+                r[name] = val(props[name]) if name in props else None
+        out.append(r)
+    return out, f"{len(out)} rows read"
+
 def snapshot():
     new = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
     snap = {k: rows(k) for k in DB if k not in ("checkins", "tasks", "coceo")}
     all_reports = rows("checkins", new)
     reports, coverage = report_coverage(all_reports, snap["agents"], snap["devices"], snap["projects"])
-    snap["checkins"] = reports[:200]
+    feed = collapse_heartbeats(reports)
+    coverage["collapsed_repeats"] = len(reports) - len(feed)
+    snap["checkins"] = feed[:200]
     snap["report_coverage"] = coverage
     snap["primary_agents"] = list(PRIMARY_AGENT_IDS)
     snap["coceo"] = rows("coceo", new, 60)
-    snap["tasks"] = rows("tasks", {"filter": {"property": "Status", "select": {"does_not_equal": "🟢 Done"}}}, 80)
+    all_tasks = rows("tasks")
+    snap["tasks"] = [t for t in all_tasks if not is_done(t.get("Status"))]
+    snap["aiceo"], snap["aiceo_status"] = aiceo_rows()
+    snap["counts"] = {"agents": len(snap["agents"]), "tasks_total": len(all_tasks), "tasks_open": len(snap["tasks"]),
+                      "checkins": coverage["unique_rows"], "checkins_feed_rows": len(feed), "aiceo": len(snap["aiceo"])}
     return snap
+
+# Public scrub. Protected terms come only from the environment (repo secret SCRUB_TERMS) or a local
+# file named by SCRUB_TERMS_FILE; they are never committed. Token prefixes are written as character
+# classes so this file itself carries no token-shaped text.
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
+# Digits inside URLs, ids and paths (run ids, query values) are not phone numbers, so a run must not touch / = # . or -.
+PHONE_RE = re.compile(r"(?<![\w/=#.-])(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}(?![\w/-])|(?<![\w/=#.+-])\+?1?\d{10}(?![\w/.-])")
+TOKEN_RE = re.compile(r"(?:n[t]n_|secre[t]_|gh[po]_|s[k]-|x[o]x[a-z]-)[A-Za-z0-9_-]{8,}")
+ID_RE = re.compile(r"[0-9a-f]{32}")
+
+def scrub_terms():
+    raw = os.environ.get("SCRUB_TERMS", "")
+    path = os.environ.get("SCRUB_TERMS_FILE")
+    if path and Path(path).is_file():
+        raw += "\n" + Path(path).read_text()
+    terms = sorted({t.strip() for t in re.split(r"[\n,]", raw) if len(t.strip()) >= 3}, key=len, reverse=True)
+    if not terms and os.environ.get("REQUIRE_SCRUB_TERMS") == "1":
+        raise SystemExit("scrub: REQUIRE_SCRUB_TERMS=1 but no terms were loaded")
+    return terms
+
+def scrub(snap, terms=None):
+    """Return (clean copy, replacement count). Ids stay intact; every other string is scrubbed."""
+    terms = scrub_terms() if terms is None else terms
+    term_re = re.compile("|".join(re.escape(t) for t in terms), re.IGNORECASE) if terms else None
+    hits = 0
+    def text(s):
+        nonlocal hits
+        if ID_RE.fullmatch(s):
+            return s
+        for rx, repl in ((term_re, "[private]"), (TOKEN_RE, "[redacted token]"),
+                         (EMAIL_RE, "[redacted email]"), (PHONE_RE, "[redacted phone]")):
+            if rx is not None:
+                s, n = rx.subn(repl, s)
+                hits += n
+        return s
+    def walk(v):
+        if isinstance(v, str):
+            return text(v)
+        if isinstance(v, list):
+            return [walk(x) for x in v]
+        if isinstance(v, dict):
+            return {k: walk(x) for k, x in v.items()}
+        return v
+    return walk(snap), hits
 
 def render(snap, at):
     data = json.dumps(snap, ensure_ascii=False).replace("</", "<\\/")
@@ -129,13 +249,15 @@ def render(snap, at):
             .replace("__AT__", at).replace("__SNAP__", data))
 
 def main():
-    snap = snapshot()
+    terms = scrub_terms()
+    snap, hits = scrub(snapshot(), terms)
+    print(f"scrub: terms_loaded={len(terms)} replaced={hits}")
     at = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
     site = Path("site")
     site.mkdir(exist_ok=True)
     (site / "index.html").write_text(render(snap, at))
     (site / "version.json").write_text(json.dumps({"built_at": at}))
-    print("built", {k: len(v) for k, v in snap.items() if isinstance(v, list)}, "at", at)
+    print("built", {k: len(v) for k, v in snap.items() if isinstance(v, list)}, "counts", snap["counts"], "aiceo:", snap["aiceo_status"], "at", at)
 
 if __name__ == "__main__":
     main()

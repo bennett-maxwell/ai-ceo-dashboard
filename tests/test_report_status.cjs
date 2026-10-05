@@ -8,7 +8,7 @@ test('good worker report is recent evidence, never runtime proof',()=>{
  const r=check();assert.equal(r.workerFresh,true);assert.equal(r.receiptRecent,true);assert.match(r.process,/Unknown/);assert.doesNotMatch(r.label,/alive|dead/i);
 });
 test('late worker with recent receipt stays stale',()=>{
- const c=coverage();c.latest.Time='2026-10-04T20:55:00Z';const r=check(c);assert.equal(r.workerFresh,false);assert.equal(r.receiptRecent,true);assert.match(r.worker,/Stale/);
+ const c=coverage();c.latest.Time='2026-10-04T20:25:00Z';const r=check(c);assert.equal(r.workerFresh,false);assert.equal(r.receiptRecent,true);assert.match(r.worker,/Stale/);
 });
 test('future worker Time is quarantined independently of recent receipt',()=>{
  const c=coverage();c.latest.Time='2026-10-05T02:59:00Z';const r=check(c);assert.equal(r.workerFresh,false);assert.equal(r.receiptRecent,true);assert.match(r.worker,/future.*unverified/);
@@ -34,9 +34,10 @@ test('absence labels distinguish incomplete coverage from exhaustive zero',()=>{
  assert.match(check(coverage({latest:null,matching_rows:0})).label,/Never observed as of exhaustive/);
  assert.match(check(coverage({latest:null,matching_rows:0}),'2026-10-04T19:00:00Z').label,/Live status unavailable/);
 });
-test('three-minute boundary and exact agent binding are enforced',()=>{
- const c=coverage();c.latest.Time='2026-10-04T20:57:00Z';assert.equal(check(c).workerFresh,true);
- c.latest.Time='2026-10-04T20:56:59Z';assert.equal(check(c).workerFresh,false);
+test('thirty-minute boundary and exact agent binding are enforced',()=>{
+ assert.equal(status.WINDOW_MIN,30);assert.equal(status.SNAPSHOT_MAX_AGE_MS,30*60000);
+ const c=coverage();c.latest.Time='2026-10-04T20:30:00Z';assert.equal(check(c).workerFresh,true);
+ c.latest.Time='2026-10-04T20:29:59Z';assert.equal(check(c).workerFresh,false);
  c.latest.Time='2026-10-04T20:59:00Z';c.latest.Agent=['wrong-agent'];assert.equal(check(c).workerFresh,false);assert.match(check(c).worker,/binding/);
 });
 test('both always-allow and always-block report validators fail the acceptance checks',()=>{
@@ -44,4 +45,38 @@ test('both always-allow and always-block report validators fail the acceptance c
  assert.doesNotThrow(()=>acceptance(status.evaluate));
  assert.throws(()=>acceptance(()=>({workerFresh:true})));
  assert.throws(()=>acceptance(()=>({workerFresh:false})));
+});
+
+test('snapshot window is thirty minutes',()=>{
+ assert.equal(status.snapshot('2026-10-04T20:30:00Z',NOW).available,true);
+ assert.equal(status.snapshot('2026-10-04T20:29:59Z',NOW).available,false);
+});
+test('clocked-out agent is excused for a day, then counted late and red',()=>{
+ const recent=coverage();recent.latest.Status='Clocked out';recent.latest.Time='2026-10-04T18:00:00Z';
+ const r=check(recent);assert.equal(r.bucket,'clocked');assert.equal(r.clockedOut,true);
+ const old=coverage();old.latest.Status='CLOCK-OUT';assert.equal(check(old).clockedOut,true);old.latest.Logged='2026-10-01T21:00:30Z';old.latest.Time='2026-10-01T21:00:00Z';
+ const o=check(old);assert.equal(o.bucket,'late');assert.equal(o.cls,'r');assert.match(o.label,/Silent >24h/);
+});
+test('a long-silent agent can only add to the late count, never lower it',()=>{
+ const c=coverage();c.latest.Time='2026-10-04T20:59:00Z';c.latest.Logged='2026-10-04T20:59:30Z';
+ const base=Date.parse('2026-10-04T21:00:00Z');let previous=0;
+ for(const mins of [1,29,31,120,23*60,25*60,3*1440]){
+  const now=base+mins*60000,built=new Date(now).toISOString();
+  const late=status.tally([status.evaluate(c,built,now)]).late;
+  assert.ok(late>=previous,'late count dropped at +'+mins+'m');previous=late;
+  if(mins>30)assert.equal(late,1);
+ }
+});
+test('future Logged or Time is never fresh and lands in unverified',()=>{
+ const t=coverage();t.latest.Time='2026-10-04T21:05:00Z';const a=check(t);assert.equal(a.workerFresh,false);assert.equal(a.bucket,'unverified');
+ const l=coverage();l.latest.Logged='2026-10-04T21:05:00Z';const b=check(l);assert.equal(b.workerFresh,false);assert.equal(b.bucket,'unverified');
+});
+test('buckets are exclusive and always add up to the total',()=>{
+ const blocked=coverage();blocked.latest.Status='BLOCKED';
+ const late=coverage();late.latest.Time='2026-10-04T20:00:00Z';
+ const list=[check(),check(blocked),check(late),check(coverage({latest:null,matching_rows:0})),check(coverage({latest:null,invalid_receipt_rows:1})),check(null),check(coverage(),'2026-10-04T19:00:00Z')];
+ assert.equal(list[1].bucket,'blocked');
+ const t=status.tally(list);assert.equal(t.total,7);
+ assert.equal(status.BUCKETS.reduce((n,b)=>n+t[b],0),t.total);
+ assert.deepEqual([t.fresh,t.blocked,t.late,t.never,t.unverified,t.unknown],[1,1,1,1,1,2]);
 });
