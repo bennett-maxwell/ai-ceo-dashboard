@@ -30,7 +30,7 @@ AICEO_FIELDS = ("Type", "Status", "Seat", "Graded by", "date:Date:start")
 PUBLIC_FIELDS = {
     "agents": ("Agent", "Status", "Platform", "Role", "Device", "Projects"),
     "devices": ("Device", "Type"),
-    "projects": ("Project", "Company", "Status", "Progress %", "Last %", "Finish condition", "Agents"),
+    "projects": ("Project", "Company", "Status", "Progress %", "Last %", "Finish condition", "Agents", "Category", "Priority", "Big project"),
     "checkins": ("Agent", "Logged", "Time", "Status", "Doing now", "Project", "Proof", "Device", "Blocker question"),
     "crons": ("Routine", "State", "Cadence", "Runs on", "Defined in"),
     "caio": ("Division", "Status", "Covers", "Projects", "Order"),
@@ -443,7 +443,7 @@ def exclude(snap, ids):
 
 def render(snap, at):
     data = json.dumps(snap, ensure_ascii=False).replace("</", "<\\/")
-    return (Path("template.html").read_text().replace("__REPORT_STATUS__", Path("report_status.js").read_text())
+    return (Path("template.html").read_text().replace("__REPORT_STATUS__", Path("report_status.js").read_text() + "\n" + (Path("big.js").read_text() if Path("big.js").is_file() else ""))
             .replace("__AT__", at).replace("__SNAP__", data))
 
 def main():
