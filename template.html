@@ -13,6 +13,8 @@
 *{box-sizing:inherit}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--sans)}
 header{max-width:1180px;margin:0 auto;padding:22px 18px 8px}.kicker{font:600 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
 h1{font-weight:700;font-size:clamp(28px,5vw,44px);line-height:1;margin:6px 0 4px}.sub{color:var(--mute);font-size:14px}
+/* W54: anchor jumps land below the sticky tab bar (46 px tall at 375 px); check-in times never split mid-string. */
+html{scroll-padding-top:56px}.ts{white-space:nowrap}
 nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}.tabs{max-width:1180px;margin:0 auto;padding:0 12px;display:flex;gap:2px;overflow-x:auto}
 .tabs a{flex:none;padding:12px 12px 10px;color:var(--mute);text-decoration:none;font-weight:600;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap}.tabs a.on{color:var(--ink);border-bottom-color:var(--accent)}
 .bar{max-width:1180px;margin:0 auto;padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.pill{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px;font:600 13px var(--sans);cursor:pointer}.pill.on{background:var(--ink);color:var(--bg)}
@@ -122,13 +124,13 @@ function renderGroups(){
  for(const [id,match,name] of LANE_GROUPS){const el=typeof globalThis[id]!=="undefined"?globalThis[id]:null;if(!el)continue;
   const ls=Ls.filter(l=>match(String(l.key||"")));
   el.innerHTML=`<p class="start">${esc(name)}: live status, last check-in and the projects due in the next 48 hours. Tap a project for its goal, done test and proof.</p>`+(ls.length?ls.map(l=>{const v=fleetLive(l),qs=Q.filter(q=>q.lane===l.lane);
-   return`<h2 class="fh" data-lane="${esc(l.key)}">${esc(l.lane)}</h2><div class="fmeta">${esc(l.route)}</div><div class="fstat"><span class="dot" style="background:${{g:"var(--green)",y:"var(--yellow)",r:"var(--red)"}[v.cls]||"var(--gray)"}"></span>${esc(v.word)}</div><div class="fmeta">Last check-in: ${esc(v.when)}${v.at?" · "+esc(v.at):""}</div>${v.src?`<div class="fmeta">Source: ${esc(v.src)}</div>`:""}${l.current?`<p class="fmeta">Working on now: ${esc(l.current)}</p>`:""}${l.queue?`<p class="fmeta">${esc(l.queue)}</p>`:""}<div class="fgrid">${qs.map(q=>fcardQ(l,q,F)).join("")||'<div class="empty">No projects yet.</div>'}</div>`}).join(""):`<div class="empty">No ${esc(name)} lane in the plan yet.</div>`)}
+   return`<h2 class="fh" data-lane="${esc(l.key)}">${esc(l.lane)}</h2><div class="fmeta">${esc(l.route)}</div><div class="fstat"><span class="dot" style="background:${{g:"var(--green)",y:"var(--yellow)",r:"var(--red)"}[v.cls]||"var(--gray)"}"></span>${esc(v.word)}</div><div class="fmeta">Last check-in: ${esc(v.when)}${v.at?` · <span class="ts">${esc(v.at)}</span>`:""}</div>${v.src?`<div class="fmeta">Source: ${esc(v.src)}</div>`:""}${l.current?`<p class="fmeta">Working on now: ${esc(l.current)}</p>`:""}${l.queue?`<p class="fmeta">${esc(l.queue)}</p>`:""}<div class="fgrid">${qs.map(q=>fcardQ(l,q,F)).join("")||'<div class="empty">No projects yet.</div>'}</div>`}).join(""):`<div class="empty">No ${esc(name)} lane in the plan yet.</div>`)}
 }
 function renderFleet(){
  const el=typeof fleet!=="undefined"?fleet:null;if(!el)return;const F=S.data.fleet||{},Ls=laneSort(F.lanes||[]),Q=F.projects||[];
  const of=l=>Q.filter(q=>q.lane===l.lane),need=Q.filter(q=>(q.protected_steps||[]).length).length;
  const [lk2,pk]=S.fl||[];const l=Ls.find(x=>x.key===lk2);
- const head=x=>{const v=fleetLive(x);return`<div class="fmeta">${esc(x.route)}</div><div class="fstat"><span class="dot" style="background:${{g:"var(--green)",y:"var(--yellow)",r:"var(--red)"}[v.cls]||"var(--gray)"}"></span>${esc(v.word)}</div><div class="fmeta">Last check-in: ${esc(v.when)}${v.at?" · "+esc(v.at):""}</div>${v.src?`<div class="fmeta">Source: ${esc(v.src)}</div>`:""}`};
+ const head=x=>{const v=fleetLive(x);return`<div class="fmeta">${esc(x.route)}</div><div class="fstat"><span class="dot" style="background:${{g:"var(--green)",y:"var(--yellow)",r:"var(--red)"}[v.cls]||"var(--gray)"}"></span>${esc(v.word)}</div><div class="fmeta">Last check-in: ${esc(v.when)}${v.at?` · <span class="ts">${esc(v.at)}</span>`:""}</div>${v.src?`<div class="fmeta">Source: ${esc(v.src)}</div>`:""}`};
  if(l&&pk){const q=of(l).find(x=>x.id===pk);if(q){const due=fleetDue(q,F),pr=q.latest_proof;
   el.innerHTML=`<p class="fback"><a class="fbtn" href="#fleet">‹ All agents</a> <a class="fbtn" href="#fleet=${esc(l.key)}">‹ ${esc(l.lane)}</a></p>
 <h2 class="fh">${esc(q.id)} · ${esc(q.title)} ${needTag(q)}</h2><p class="fmeta">Agent: ${esc(l.lane)}</p>

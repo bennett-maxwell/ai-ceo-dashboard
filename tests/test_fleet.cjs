@@ -37,7 +37,7 @@ test('one card per lane with route, status, last check-in and project count; no 
   assert.ok(one.includes(l.lane.replace(/&/g,'&amp;')),'name '+l.lane);assert.ok(one.includes('Last check-in:'),'check-in line '+l.lane);
   const n=fleet.projects.filter(q=>q.lane===l.lane).length;assert.ok(one.includes(`${n} project${n===1?'':'s'} ›`),'count '+l.lane);
  }
- const dash=h.slice(h.indexOf('data-lane="dash"'));assert.match(dash.slice(0,dash.indexOf('</a>')),/Active now · Working[\s\S]*Last check-in: 3m ago · 2026-10-06T02:57:00Z/);
+ const dash=h.slice(h.indexOf('data-lane="dash"'));assert.match(dash.slice(0,dash.indexOf('</a>')),/Active now · Working[\s\S]*Last check-in: 3m ago · <span class="ts">2026-10-06T02:57:00Z<\/span>/);
  const laya=h.slice(h.indexOf('data-lane="laya"'));assert.match(laya.slice(0,laya.indexOf('</a>')),/Not checked in yet[\s\S]*Last check-in: pending first tick/);
  // Dot has a board row in real data but not in this fixture: it must say pending, not borrow another seat's time.
  const dot=h.slice(h.indexOf('data-lane="dot"'));assert.match(dot.slice(0,dot.indexOf('</a>')),/pending first tick/);
@@ -77,7 +77,7 @@ test('phone layout: cards and buttons are big tap targets and long routes wrap',
 test('T23: Grok, Dash and Dot tabs show only their own lanes, live status and projects; Agents grid lists them first',()=>{
  const {env,fleet}=run('#dash');assert.equal(S(env).tab,'dash');
  const d=env.dash.innerHTML;assert.match(d,/data-lane="dash"/);assert.doesNotMatch(d,/data-lane="(dot|grok-a|laya)"/);
- assert.match(d,/Active now · Working[\s\S]*Last check-in: 3m ago · 2026-10-06T02:57:00Z/);
+ assert.match(d,/Active now · Working[\s\S]*Last check-in: 3m ago · <span class="ts">2026-10-06T02:57:00Z<\/span>/);
  const nd=fleet.projects.filter(q=>q.lane==='Dash').length;assert.equal((d.match(/href="#fleet=dash\//g)||[]).length,nd);
  const g=run('#grok').env.grok.innerHTML;const gk=fleet.lanes.filter(l=>/^grok/.test(l.key));assert.ok(gk.length>0);
  for(const l of gk)assert.ok(g.includes(`data-lane="${l.key}"`),'grok lane '+l.key);assert.doesNotMatch(g,/data-lane="(dash|dot)"/);
@@ -104,8 +104,8 @@ test('Grok A/B/C/KB/E lanes read the live Grok Web row, never a retired Heavy 4.
  assert.doesNotMatch(JSON.stringify(raw.lanes.map(l=>l.board_agent)),/Heavy 4\.7/);
  assert.deepEqual(raw.lanes.slice(0,7).map(l=>l.key),['grok-a','grok-b','grok-c','grok-kb','grok-e','dash','dot']);
  const h=run('#fleet',grokData).env.fleet.innerHTML,card=k=>{const c=h.slice(h.indexOf(`data-lane="${k}"`));return c.slice(0,c.indexOf('</a>'))};
- assert.match(card('grok-a'),/Last check-in: 10m ago · 2026-10-06T02:50:00Z[\s\S]*tagged thread A/);assert.doesNotMatch(card('grok-a'),/02:59:00Z/);
- assert.match(card('grok-b'),/Last check-in: 20m ago · 2026-10-06T02:40:00Z[\s\S]*tagged thread B/);
+ assert.match(card('grok-a'),/Last check-in: 10m ago · <span class="ts">2026-10-06T02:50:00Z<\/span>[\s\S]*tagged thread A/);assert.doesNotMatch(card('grok-a'),/02:59:00Z/);
+ assert.match(card('grok-b'),/Last check-in: 20m ago · <span class="ts">2026-10-06T02:40:00Z<\/span>[\s\S]*tagged thread B/);
  assert.match(card('grok-e'),/Last check-in: 10m ago[\s\S]*shared Grok Web row; no check-in tagged thread E yet/);
  // A lane still pointed at a retired row says so instead of showing the retired row's time.
  const r=run('#fleet',d=>{grokData(d);d.fleet.lanes[0].board_agent='Grok A (Heavy 4.7)'}).env.fleet.innerHTML;
