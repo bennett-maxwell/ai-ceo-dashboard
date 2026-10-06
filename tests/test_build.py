@@ -188,4 +188,18 @@ class ExcludeTests(unittest.TestCase):
         self.assertIn(keep, site); self.assertIn('Public task', site)
         self.assertIn(f'exclude: ids={len(ids)} dropped={len(ids)}', out.getvalue())
 
+class AsksTests(unittest.TestCase):
+    def test_asks_file_loads_and_survives_scrub_unchanged(self):
+        # The Your-asks tab reads asks.json; the public scrub must not need to touch it (no emails, phones or
+        # token-shaped words such as "ask-yourself", which matches the token prefix rule).
+        asks = build.load_asks()
+        self.assertGreaterEqual(len(asks['asks']), 1); self.assertGreaterEqual(len(asks['lanes']), 1)
+        self.assertTrue(1 <= len(asks['needs_you']) <= 5)
+        self.assertEqual(set(asks), {'asks', 'lanes', 'needs_you', 'updated', 'sources'})
+        _, hits = build.scrub({'asks': asks}, [])
+        self.assertEqual(hits, 0)
+
+    def test_missing_asks_file_renders_empty_not_crash(self):
+        self.assertEqual(build.load_asks('no-such-file.json')['asks'], [])
+
 if __name__=='__main__': unittest.main()

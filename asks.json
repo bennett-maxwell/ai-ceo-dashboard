@@ -86,12 +86,12 @@
   },
   {
    "n": 8,
-   "ask": "Ask-yourself, red-team and postmortem with MAH",
+   "ask": "Ask yourself, red-team and postmortem with MAH",
    "owner": "Mack",
    "lane": "-",
    "status": "In progress",
    "proof": {
-    "text": "Postmortem done; no ask-yourself or red-team receipt"
+    "text": "Postmortem done; no ask yourself or red-team receipt"
    },
    "updated": "10/06 02:37Z"
   },
