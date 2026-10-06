@@ -1,7 +1,7 @@
 {
  "_about": "Bennett's asks, lanes and the short Needs-you list for the 'Your asks' tab. Hand-kept from the independent reviews named in each proof; never mark Done without proof. No lead names, emails, phones or personal legal matters here.",
  "updated": "2026-10-06T02:41Z",
- "sources": "W17 full ask table (64 asks, independent review 02:30-02:37Z) plus this tab request; W10 grade 02:32Z; go round 1 sends; lane plan; W11 lane rows",
+ "sources": "W17 full ask table (64 asks, independent review 02:30-02:37Z) plus this tab request; W10 grade 02:32Z; go round 1 sends; lane plan; W11 lane rows; needs-you C06 packet entry added 2026-10-06 03:56Z by Mack W2 (ask rows not re-reviewed)",
  "asks": [
   {
    "n": 1,
@@ -939,6 +939,12 @@
    "where": "Reply to Mack in chat",
    "do": "Say 'restore the 10/7 stop' or 'keep it running'",
    "done_when": "the choice is written in heartbeat.yml (the stop was removed in commit 100a010)"
+  },
+  {
+   "what": "OWNER Bennett (C06): approve one swap, Write( to Edit( on one deny rule",
+   "where": "Reply to Mack in chat. Packet: /Users/temp/.openclaw/receipts/coceo/monitoring-audit-20261005/packet-C06-permission.md",
+   "do": "Reply YES. An admin then changes the rule line \"Write(//Users/openclaw/.openclaw/agents/**)\" to \"Edit(//Users/openclaw/.openclaw/agents/**)\" under permissions.deny in the user settings file named in the packet, with a timestamped backup first. Nothing else changes.",
+   "done_when": "that rule line reads Edit(//Users/openclaw/.openclaw/agents/**) and the next tick no longer prints the warning for it"
   }
  ]
 }
