@@ -66,7 +66,7 @@
    "route": "Studio com.fki.laya-worker JSON job queue",
    "focus": "Yes/no classification + scoring only (no prose)",
    "current": "find-buyers backlog",
-   "board_agent": null
+   "board_agent": "Laya (Studio)"
   },
   {
    "key": "qwen",
@@ -74,7 +74,7 @@
    "route": "Studio ollama qwen3 via fleet-ssh + W25 thread runner",
    "focus": "Drafting, summarising, code review",
    "current": "none",
-   "board_agent": null
+   "board_agent": "Qwen (Studio)"
   },
   {
    "key": "gemma",
@@ -82,7 +82,7 @@
    "route": "Studio ollama gemma3:27b via fleet-ssh + W25 thread runner",
    "focus": "Second-opinion review + batch summaries",
    "current": "none",
-   "board_agent": null
+   "board_agent": "Gemma (Studio)"
   }
  ],
  "projects": [
