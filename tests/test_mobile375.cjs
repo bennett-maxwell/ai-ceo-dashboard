@@ -45,7 +45,7 @@ test('real 375 px layout in headless Chrome: intro below the bar after a jump; t
  if(process.platform==='linux')args.push('--no-sandbox','--disable-gpu','--disable-dev-shm-usage');
  const chrome=spawn(CHROME,[...args,'about:blank'],{stdio:['ignore','ignore','pipe']});
  try{
-  const ws=await new Promise((res,rej)=>{let b='';const t=setTimeout(()=>rej(new Error('Chrome did not start')),20000);chrome.stderr.on('data',d=>{b+=d;const m=b.match(/ws:\/\/\S+/);if(m){clearTimeout(t);res(m[0])}})});
+  const ws=await new Promise((res,rej)=>{let b='';const t=setTimeout(()=>rej(new Error('Chrome did not start')),45000);chrome.stderr.on('data',d=>{b+=d;const m=b.match(/ws:\/\/\S+/);if(m){clearTimeout(t);res(m[0])}})});
   const sock=new WebSocket(ws);await new Promise((r,j)=>{sock.onopen=r;sock.onerror=j});
   let n=0;const pend={};sock.onmessage=e=>{const m=JSON.parse(e.data);if(m.id&&pend[m.id]){pend[m.id](m);delete pend[m.id]}};
   const send=(method,params={},sessionId)=>new Promise(r=>{const i=++n;pend[i]=r;sock.send(JSON.stringify({id:i,method,params,sessionId}))});

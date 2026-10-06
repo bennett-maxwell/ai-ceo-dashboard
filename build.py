@@ -137,10 +137,19 @@ def timestamp(value):
     except ValueError:
         return None
 
+# Logged and created_time are minute-resolution in Notion, so a pickup and its result often share a minute.
+# Within one minute an opening report (ACK, PICKED UP, CLOCK-IN) ranks below any other status, so the seat's
+# latest card shows the result, not the pickup (dash-audit 2026-10-06: qwen@studio showed PICKED UP while its
+# 14:40:44 FINISHED row sat in the same minute). Page id stays the last tie-break so the order is deterministic.
+OPENING_STATUSES = {"ACK", "PICKED UP", "CLOCK-IN"}
+
+def same_minute_rank(r):
+    return 0 if str(norm_status(r.get("Status")) or "").strip().upper() in OPENING_STATUSES else 1
+
 def report_coverage(reports, agents, devices, projects, cutoff=None):
     # Scan to exhaustion before limiting the activity feed. Never infer absence from a cap.
     unique = {r["url"]: r for r in reports}
-    source_rows = sorted(unique.values(), key=lambda r: (timestamp(r.get("Logged")) or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc), r["url"]), reverse=True)
+    source_rows = sorted(unique.values(), key=lambda r: (timestamp(r.get("Logged")) or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc), same_minute_rank(r), r["url"]), reverse=True)
     cutoff = cutoff or datetime.datetime.now(datetime.timezone.utc)
     complete = all(r.get("_agent_relation_complete", True) for r in source_rows)
     known_agents = {a["url"] for a in agents}

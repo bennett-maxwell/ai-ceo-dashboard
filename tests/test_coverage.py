@@ -25,6 +25,15 @@ class CoverageTests(unittest.TestCase):
         self.assertEqual(c['per_agent']['absent']['matching_rows'],0)
         self.assertTrue(c['exhaustive']);self.assertEqual(c['duplicate_row_ids'],1)
         self.assertEqual(len(feed),211)
+    def test_same_minute_result_beats_pickup_whatever_the_page_ids(self):
+        for pick_id,done_id in [('a','z'),('z','a')]:
+            pick=self.report(pick_id,logged='2026-10-06T14:40:00.000Z');pick['Status']='PICKED UP'
+            done=self.report(done_id,logged='2026-10-06T14:40:00.000Z');done['Status']='FINISHED'
+            self.assertEqual(self.coverage([pick,done])[1]['per_agent']['dash']['latest']['Status'],'FINISHED')
+            self.assertEqual(self.coverage([done,pick])[1]['per_agent']['dash']['latest']['Status'],'FINISHED')
+        newer_pick=self.report('p',logged='2026-10-06T14:41:00.000Z');newer_pick['Status']='Picked up'
+        older_done=self.report('d',logged='2026-10-06T14:40:00.000Z');older_done['Status']='FINISHED'
+        self.assertEqual(self.coverage([older_done,newer_pick])[1]['per_agent']['dash']['latest']['url'],'p')
     def test_new_receipt_replaying_old_worker_time_is_flagged(self):
         reports=[self.report('old',logged='2026-10-04T20:58:30Z',time='2026-10-04T20:58:00Z'),self.report('new',time='2026-10-04T20:58:00Z')]
         self.assertTrue(self.coverage(reports)[1]['per_agent']['dash']['latest_replayed'])
