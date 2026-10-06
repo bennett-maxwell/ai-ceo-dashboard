@@ -1,0 +1,944 @@
+{
+ "_about": "Bennett's asks, lanes and the short Needs-you list for the 'Your asks' tab. Hand-kept from the independent reviews named in each proof; never mark Done without proof. No lead names, emails, phones or personal legal matters here.",
+ "updated": "2026-10-06T02:41Z",
+ "sources": "W17 full ask table (64 asks, independent review 02:30-02:37Z) plus this tab request; W10 grade 02:32Z; go round 1 sends; lane plan; W11 lane rows",
+ "asks": [
+  {
+   "n": 1,
+   "ask": "Run the AI CEO and co-CEO projects",
+   "owner": "Mack",
+   "lane": "W8",
+   "status": "In progress",
+   "proof": {
+    "text": "Tick runs but fails on a DNS error (W8)"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 2,
+   "ask": "Bring up my command-center dashboard",
+   "owner": "Mack",
+   "lane": "W12",
+   "status": "Done",
+   "proof": {
+    "text": "Public page, iPhone screenshot 02:23Z",
+    "url": "https://bennett-maxwell.github.io/ai-ceo-dashboard/"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 3,
+   "ask": "Make sure it stays updated",
+   "owner": "Mack",
+   "lane": "W12",
+   "status": "Done",
+   "proof": {
+    "text": "Rebuilds every ~4 min (W17 live run list)",
+    "url": "https://github.com/bennett-maxwell/ai-ceo-dashboard/actions/workflows/heartbeat.yml"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 4,
+   "ask": "Use overnight, task-assist, EP and red-team skills",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Unproved",
+   "proof": {
+    "text": "No receipt for any of the 4 skills"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 5,
+   "ask": "Go with all your recommended defaults",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Defaults not written down in one list"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 6,
+   "ask": "Viewable on any iPhone, no Claude login",
+   "owner": "Mack",
+   "lane": "W9",
+   "status": "Done",
+   "proof": {
+    "text": "375px screenshot, public URL, no login",
+    "url": "https://bennett-maxwell.github.io/ai-ceo-dashboard/"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 7,
+   "ask": "Host it (GHL, Vercel, Cloudflare or GitHub)",
+   "owner": "Mack",
+   "lane": "W12",
+   "status": "Done",
+   "proof": {
+    "text": "GitHub Pages, commit 68efe1e",
+    "url": "https://github.com/bennett-maxwell/ai-ceo-dashboard/commit/68efe1e1618f91c06cfb8ddf70819659f69f1150"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 8,
+   "ask": "Ask-yourself, red-team and postmortem with MAH",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Postmortem done; no ask-yourself or red-team receipt"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 9,
+   "ask": "Parallel subagents wired to the right board",
+   "owner": "Mack",
+   "lane": "W8",
+   "status": "In progress",
+   "proof": {
+    "text": "Hub rows from many writers; not re-probed by W17"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 10,
+   "ask": "Every agent runs the clock-in skill on this board",
+   "owner": "Mack",
+   "lane": "W3",
+   "status": "In progress",
+   "proof": {
+    "text": "10 of ~30 seats live; Mack CLI has 0 rows"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 11,
+   "ask": "Keep going until 6 PM tomorrow",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Due 10/07 00:00Z; loop lives in one session"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 12,
+   "ask": "Agents check in every 2 to 5 minutes",
+   "owner": "Mack",
+   "lane": "W3, W5, W6",
+   "status": "In progress",
+   "proof": {
+    "text": "Mack 3 min, iMac 2, Dash 5; Dot and Hank ~10"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 13,
+   "ask": "Read the agent directory and AI comms skill",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Directory read 01:58Z; no AI comms receipt"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 14,
+   "ask": "Make sure everyone is responding",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Pings sent; no replies captured yet"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 15,
+   "ask": "Give every agent 3-5 tasks now",
+   "owner": "Mack",
+   "lane": "W11",
+   "status": "In progress",
+   "proof": {
+    "text": "26 lanes; Brock and Ivan have 0"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 16,
+   "ask": "Dash: 15-min scan until 6 PM tomorrow",
+   "owner": "Dash",
+   "lane": "H1",
+   "status": "In progress",
+   "proof": {
+    "text": "Dash rows 02:01-02:19Z; end time pending"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 17,
+   "ask": "Fix the Vercel/Notion board issue",
+   "owner": "Mack",
+   "lane": "W1",
+   "status": "Done",
+   "proof": {
+    "text": "Board HTTP 200, no 'No token' (W10 02:32Z)",
+    "url": "https://fki-agents-board.vercel.app"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 18,
+   "ask": "Try again",
+   "owner": "Mack",
+   "lane": "W1",
+   "status": "Done",
+   "proof": {
+    "text": "Same proof as #17"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 19,
+   "ask": "Q: 5th-grade version, what do I do?",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Answered (token paste guide)"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 20,
+   "ask": "Hand-off for Claude web guided action",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Guide written; you replied 'done'"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 21,
+   "ask": "Show me the page to paste it",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Same as #20"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 22,
+   "ask": "Where do I add it? Take me there",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "You replied 'done'"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 23,
+   "ask": "Q: Do you understand the full dashboard project?",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Answered: one hub, every board is a view"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 24,
+   "ask": "Task review of all my asks, last 5 days",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "29 found; Trail ledger not read yet"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 25,
+   "ask": "MAH to execute, then ICL, EP and red-team",
+   "owner": "Mack",
+   "lane": "W10",
+   "status": "In progress",
+   "proof": {
+    "text": "Rubric frozen; no grade, EP or red-team receipt"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 26,
+   "ask": "One board: agents and projects click to each other",
+   "owner": "Mack",
+   "lane": "W7, W8",
+   "status": "In progress",
+   "proof": {
+    "text": "40 of 70 projects linked; Trail separate"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 27,
+   "ask": "Go wide and deep; verify all with MAH",
+   "owner": "Mack",
+   "lane": "W10",
+   "status": "In progress",
+   "proof": {
+    "text": "Grader W10 scored 34/93; fixes running"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 28,
+   "ask": "Use more workers",
+   "owner": "Mack",
+   "lane": "W1-W11",
+   "status": "Done",
+   "proof": {
+    "text": "Workers W1-W17 outputs"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 29,
+   "ask": "Gatekeeper skill until this is done",
+   "owner": "Mack",
+   "lane": "W10",
+   "status": "Unproved",
+   "proof": {
+    "text": "No gatekeeper receipt"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 30,
+   "ask": "Use Mack CLI as a worker too",
+   "owner": "Mack CLI",
+   "lane": "MC1",
+   "status": "Needs you",
+   "proof": {
+    "text": "Waits for your sign-in code"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 31,
+   "ask": "GMA + micromanage: 3-5 lanes each",
+   "owner": "Mack",
+   "lane": "H1-H4, D1-D4, G1-G5",
+   "status": "In progress",
+   "proof": {
+    "text": "Lane packets sent; acceptance not proved"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 32,
+   "ask": "5 subagents per check-in where possible",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Unproved",
+   "proof": {
+    "text": "No evidence any agent runs 5 subagents"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 33,
+   "ask": "Ask me for all approvals agents need",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Approvals list written (sections A-D)"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 34,
+   "ask": "Ping them all; test they respond",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Pings sent 02:29-02:32Z; no replies captured"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 35,
+   "ask": "Q: More approvals before auto mode?",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Answered"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 36,
+   "ask": "Updates every 5 min with real work and blockers",
+   "owner": "Mack",
+   "lane": "W12",
+   "status": "Done",
+   "proof": {
+    "text": "Rebuilds ~4 min; agent and blocker panels live",
+    "url": "https://github.com/bennett-maxwell/ai-ceo-dashboard/actions/workflows/heartbeat.yml"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 37,
+   "ask": "Q: Did you find everything from the last 5 days?",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Answered: 29 found, search was blocked"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 38,
+   "ask": "List it all out here",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Asks inventory file written"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 39,
+   "ask": "Tell me what time this will be live",
+   "owner": "Mack",
+   "lane": "W12",
+   "status": "Done",
+   "proof": {
+    "text": "Live now",
+    "url": "https://bennett-maxwell.github.io/ai-ceo-dashboard/"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 40,
+   "ask": "Copy what was built; take off old projects",
+   "owner": "Mack",
+   "lane": "W12",
+   "status": "In progress",
+   "proof": {
+    "text": "Reuse proved; old-project fold not checked by a non-builder",
+    "url": "https://github.com/bennett-maxwell/ai-ceo-dashboard/commit/68efe1e1618f91c06cfb8ddf70819659f69f1150"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 41,
+   "ask": "Q: Why isn't Dash working?",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Answered: Dash rows 02:07-02:19Z"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 42,
+   "ask": "Q: What are you waiting on for assignments?",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Answered: classifier was blocking sends"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 43,
+   "ask": "Give everyone assignments",
+   "owner": "Mack",
+   "lane": "G1-G5, D1-D4, H1-H4",
+   "status": "In progress",
+   "proof": {
+    "text": "Dash, Dot, Grok sent; Brock and Ivan idle"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 44,
+   "ask": "Tell me where to install the 2 Mac jobs",
+   "owner": "Mack",
+   "lane": "W3, W5",
+   "status": "Done",
+   "proof": {
+    "text": "Both jobs ran, last exit 0 (W17 02:35Z)"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 45,
+   "ask": "Q: Can I turn auto mode back on?",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Answered"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 46,
+   "ask": "Stop telling me unverified things",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Wrong stamps and '10 min' claim still to correct"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 47,
+   "ask": "I want to see the Projects tab",
+   "owner": "Mack",
+   "lane": "W12",
+   "status": "In progress",
+   "proof": {
+    "text": "Projects tab exists; link not sent to you yet",
+    "url": "https://bennett-maxwell.github.io/ai-ceo-dashboard/#projects"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 48,
+   "ask": "Task review + ICL on this whole thread",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "W16 and W17 reviews; no cross-family grader yet"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 49,
+   "ask": "Then run the postmortem",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "W16 postmortem: 8 root causes"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 50,
+   "ask": "Answer me in 5th-grade words",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Reply posted 02:26Z"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 51,
+   "ask": "Talk to Grok, Dash and Dot in the browser",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Sends 02:29-02:32Z, 5 screenshots"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 52,
+   "ask": "Ping them every 5 min for an hour, then 10",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Loop created 02:32Z; no run history yet"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 53,
+   "ask": "Q: Why haven't you pushed Grok, Dash and Dot?",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Answered"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 54,
+   "ask": "Editable from any web seat",
+   "owner": "Mack",
+   "lane": "W8",
+   "status": "In progress",
+   "proof": {
+    "text": "Dash and Dot rows exist; Grok stale, Mack CLI none"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 55,
+   "ask": "View it on my iPhone with no AI login",
+   "owner": "Mack",
+   "lane": "W9",
+   "status": "Done",
+   "proof": {
+    "text": "375px screenshot, public URL",
+    "url": "https://bennett-maxwell.github.io/ai-ceo-dashboard/"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 56,
+   "ask": "Remember: I will never touch Notion",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Memory file saved and indexed"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 57,
+   "ask": "...and in every skill you touch",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Skills commit 3fc32f76 on main (7 skills)",
+    "url": "https://github.com/bennett-maxwell/fki-ai-skills/commit/3fc32f76"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 58,
+   "ask": "Browser allow rules (4 rules)",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "All 4 rules present in settings"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 59,
+   "ask": "'Run a'",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Meaning not confirmed"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 60,
+   "ask": "Yes to all 5",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "Done",
+   "proof": {
+    "text": "Standing approvals saved to memory"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 61,
+   "ask": "You have Notion admin, fix it yourself",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Left items need sudo/root, not Notion"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 62,
+   "ask": "You run the doctor",
+   "owner": "Bennett",
+   "lane": "GC1",
+   "status": "Needs you",
+   "proof": {
+    "text": "Blocked: needs sudo, root-owned"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 63,
+   "ask": "Sign in Mack CLI or bring up the sign-in",
+   "owner": "Bennett",
+   "lane": "MC1",
+   "status": "Needs you",
+   "proof": {
+    "text": "Sign-in page open; code not pasted"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 64,
+   "ask": "Do more. Mode switched. Go",
+   "owner": "Mack",
+   "lane": "-",
+   "status": "In progress",
+   "proof": {
+    "text": "Round 1 sent; loop ticks not proved yet"
+   },
+   "updated": "10/06 02:37Z"
+  },
+  {
+   "n": 65,
+   "ask": "One view: everything I asked, who owns it, done?",
+   "owner": "Mack",
+   "lane": "W18",
+   "status": "In progress",
+   "proof": {
+    "text": "This tab (W18); waits for an independent grade"
+   },
+   "updated": "10/06 02:40Z"
+  }
+ ],
+ "lanes": [
+  {
+   "lane": "H1",
+   "owner": "Dash",
+   "does": "Set Project and Device on every Dash check-in; prove with 3 rows",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "H2",
+   "owner": "Dash",
+   "does": "Check the public dashboard: HTTP code, phone layout, newest time",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "H3",
+   "owner": "Dash",
+   "does": "List where asks before 3/31 live (channel and label names only)",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "H4",
+   "owner": "Dash",
+   "does": "Count private data on the public dashboards (counts only)",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "D1",
+   "owner": "Dot",
+   "does": "Trail check, one week (7/28 back to 7/22), read-only",
+   "status": "In progress",
+   "report": "Sent go round 1; Dot read it"
+  },
+  {
+   "lane": "D2",
+   "owner": "Dot",
+   "does": "Count own check-ins missing Project or Device",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "D3",
+   "owner": "Dot",
+   "does": "Draft plain words for the dashboard views",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "D4",
+   "owner": "Dot",
+   "does": "Red-team the dashboard rubric for gaps (read-only)",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "G1",
+   "owner": "Grok Web (thread B)",
+   "does": "Fill missing Project links, 5 per check-in",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "G2",
+   "owner": "Grok Web (thread B)",
+   "does": "Cursor seat check-in writer spec plus 1 test row",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "G3",
+   "owner": "Grok Web (thread C)",
+   "does": "5 revenue drafts, labeled Lead A-E, no sends",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "G4",
+   "owner": "Grok Web (KB thread)",
+   "does": "KB vault: add missing subfolder index notes",
+   "status": "In progress",
+   "report": "Sent go round 1"
+  },
+  {
+   "lane": "G5",
+   "owner": "Grok Web (KB thread)",
+   "does": "Trail check 10/05 back to 9/29, 7 rows, then stop",
+   "status": "In progress",
+   "report": "Sent go round 1 (not a Notion row yet)"
+  },
+  {
+   "lane": "W1",
+   "owner": "Mack",
+   "does": "Agents board: retired fix, fleet and projects sections",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W2",
+   "owner": "Mack",
+   "does": "iMac check-ins",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W3",
+   "owner": "Mack",
+   "does": "Mack check-in Mac job",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W4",
+   "owner": "Mack",
+   "does": "Notion views (blocked by a safety gate)",
+   "status": "Stuck",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W5",
+   "owner": "Mack",
+   "does": "Local model check-ins",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W6",
+   "owner": "Mack",
+   "does": "Grok CLI check-ins",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W7",
+   "owner": "Mack",
+   "does": "Fill Project and Device on check-ins",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W8",
+   "owner": "Mack",
+   "does": "All writers send to the one hub board",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W9",
+   "owner": "Mack",
+   "does": "Check the public pages",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W10",
+   "owner": "Mack",
+   "does": "Independent grader",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "W11",
+   "owner": "Mack",
+   "does": "Lane rows in Notion Projects",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "MC1",
+   "owner": "Mack CLI",
+   "does": "Second grader once signed in",
+   "status": "Stuck",
+   "report": "At the sign-in screen"
+  },
+  {
+   "lane": "LM1",
+   "owner": "Local model (Studio)",
+   "does": "Mask lead names in check-in drafts, offline",
+   "status": "In progress",
+   "report": "Notion row"
+  },
+  {
+   "lane": "GC1",
+   "owner": "Grok MB (Grant) + Grok IM (Brock)",
+   "does": "Grok CLI seats check in",
+   "status": "Stuck",
+   "report": "Grant blocked by the harness gate"
+  }
+ ],
+ "needs_you": [
+  {
+   "what": "Fix Grant's Grok seat",
+   "where": "Terminal on the MacBook",
+   "do": "sudo /usr/local/fki-harness/fki-doctor",
+   "done_when": "it ends with no errors and Grant checks in"
+  },
+  {
+   "what": "Sign in the second Mack (Mack CLI)",
+   "where": "Browser tab with the Claude login, then the director-3 terminal",
+   "do": "Tap Continue, copy the code, paste it at 'Paste code here'",
+   "done_when": "director-3 shows a Claude prompt instead of the login screen"
+  },
+  {
+   "what": "Decide: stop dashboard rebuilds at 10/7 6 PM?",
+   "where": "Reply to Mack in chat",
+   "do": "Say 'restore the 10/7 stop' or 'keep it running'",
+   "done_when": "the choice is written in heartbeat.yml (the stop was removed in commit 100a010)"
+  }
+ ]
+}

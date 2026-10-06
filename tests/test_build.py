@@ -26,7 +26,7 @@ class BuildTests(unittest.TestCase):
         self.assertNotIn('PRIVATE_SENTINEL', html)
         self.assertNotIn('Private note', html)
         self.assertIn('Visible <\\/script>', html)
-        for tab in ('now','coceo','agents','devices','projects','tasks','caio','crons'):
+        for tab in ('asks','now','coceo','agents','devices','projects','tasks','caio','crons'):
             self.assertIn(f'<section id="{tab}">', html)
         self.assertIn('<meta name="robots" content="noindex, nofollow">', html)
     def test_all_tables_have_explicit_allowlists(self):

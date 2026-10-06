@@ -282,7 +282,17 @@ def snapshot():
     snap["counts"] = {"agents": len(snap["agents"]), "tasks_total": len(all_tasks), "tasks_open": len(snap["tasks"]),
                       "checkins": coverage["unique_rows"], "checkins_feed_rows": len(feed), "aiceo": len(snap["aiceo"]),
                       "checkin_status": status_counts(reports)}
+    snap["asks"] = load_asks()
     return snap
+
+def load_asks(path="asks.json"):
+    """Bennett's asks, lane owners and Needs-you rows, hand-kept in a committed file. Only these keys
+    reach the page; the snapshot still goes through exclude() and scrub() like every Notion row."""
+    p = Path(path)
+    if not p.exists():
+        return {"asks": [], "lanes": [], "needs_you": [], "updated": None}
+    raw = json.loads(p.read_text())
+    return {k: raw.get(k) for k in ("asks", "lanes", "needs_you", "updated", "sources")}
 
 # Public scrub. Protected terms come only from the environment (repo secret SCRUB_TERMS) or a local
 # file named by SCRUB_TERMS_FILE; they are never committed. Token prefixes are written as character

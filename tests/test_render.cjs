@@ -9,7 +9,7 @@ const PROJ='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1',PROJ2='aaaaaaaaaaaaaaaaaaaaaaaaaaa
 function run(at,complete=true,mutate=()=>{}){
  const DateFixed=class extends Date{constructor(...args){super(...(args.length?args:['2026-10-04T21:00:00Z']))}static now(){return Date.parse('2026-10-04T21:00:00Z')}};
  const element=()=>({innerHTML:'',textContent:'',style:{},addEventListener(){},classList:{toggle(){}}});
- const ids=['now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
+ const ids=['asks','now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
  const env={Date:DateFixed,URL,console,location:{href:'https://example.com/#agents',hash:'#agents',replace(){}},history:{replaceState(){}},document:{hidden:false,querySelectorAll:s=>s==='section'?sections:[],addEventListener(){}},setInterval:(f,ms)=>env.interval=ms,fetch:async()=>({ok:false}),sessionStorage:{getItem(){return null},setItem(){}}};
  ids.forEach((id,i)=>env[id]=sections[i]);['tabs','companies','fresh'].forEach(id=>env[id]=element());
  const data={primary_agents:PRIMARY,agents:[[DASH,'Dash'],[DOT,'Dot'],[HANK,'Hank'],[MACK,'Claude MB CLI'],[GRANT,'Grok MB (Grant)'],[GROKST,'Grok ST','⛔ Retired']].map(([url,Agent,Status])=>({url,Agent,Status,Projects:[],Device:[]})),devices:[],projects:[],checkins:[],report_coverage:{exhaustive:complete,unique_rows:230,unlinked_rows:1,per_agent:{}}};
@@ -158,5 +158,13 @@ test('projects fold into Older after 7 idle days or Done; lanes, project agents 
  assert.match(env.projects.innerHTML,new RegExp('href="#agent='+PRIMARY[0]+'">Dash'));
  assert.match(env.agents.innerHTML,/🧭 Lane One/);assert.doesNotMatch(env.agents.innerHTML,/Old Idea/);
  assert.doesNotMatch(env.agents.innerHTML,/Grok ST/);
- assert.match(env.now.innerHTML,/Which ad account should be used\?/);assert.match(env.now.innerHTML,/Stuck Lane/);
+ assert.match(env.now.innerHTML,/Which ad account should be used\?/);const older=env.now.innerHTML.indexOf('Older blockers');assert.ok(older>0,'stale blocked project folds into Older blockers');assert.ok(env.now.innerHTML.indexOf('Stuck Lane')>older,'Stuck Lane (35 h idle) is not a current block');
+});
+test('6 h rule: a blocked project with activity 3 h ago is a current block, one idle 7 h is folded',()=>{
+ const [P5,P6]=['e','f'].map(c=>c.repeat(32));
+ const env=run('2026-10-04T21:00:00Z',true,data=>{
+  data.projects=[{url:P5,Project:'Fresh Block',Status:'🔴 Stuck',Agents:[],_edited:'2026-10-04T18:00:00Z'},{url:P6,Project:'Idle Block',Status:'🔴 Stuck',Agents:[],_edited:'2026-10-04T14:00:00Z'}];
+ });
+ const h=env.now.innerHTML,older=h.indexOf('Older blockers');
+ assert.match(h,/blocked projects \(1\)/);assert.ok(h.indexOf('Fresh Block')>0&&h.indexOf('Fresh Block')<older);assert.ok(h.indexOf('Idle Block')>older);
 });
