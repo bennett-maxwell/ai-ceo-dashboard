@@ -1,6 +1,8 @@
 {
  "updated": "2026-10-06T02:52:57Z",
  "window": "48 h from 2026-10-06",
+ "window_end": "2026-10-08T02:52:57Z",
+ "status_as_of": "2026-10-06T03:48:04Z",
  "planned_by": "W23",
  "source": "Bennett 10/5 20:55 MT ask; plan file projects-48h.json (W23)",
  "hard_lines": [
@@ -15,42 +17,57 @@
   {
    "key": "grok-a",
    "lane": "Grok A",
-   "route": "grok.com thread 08b4e6fc (browser tab-2)",
+   "route": "Grok Web thread A · grok.com thread 08b4e6fc (browser tab-2)",
    "focus": "Projects + Trail",
    "current": "16 blank project rows + A8",
-   "board_agent": "Grok A (Heavy 4.7)"
+   "board_agent": "Grok Web",
+   "thread": "A",
+   "thread_match": "\\b(?:GA\\d|A\\d{1,2})\\b",
+   "queue": "Work queue: 315 rows in 27 units, about 27 check-ins (W34, 2026-10-06T03:42:48Z)"
   },
   {
    "key": "grok-b",
    "lane": "Grok B",
-   "route": "grok.com thread 88ce9298",
+   "route": "Grok Web thread B · grok.com thread 88ce9298",
    "focus": "Fleet infra",
    "current": "G1/G2 Cursor writer",
-   "board_agent": "Grok B (Heavy 4.7)"
+   "board_agent": "Grok Web",
+   "thread": "B",
+   "thread_match": "\\b(?:GB\\d|B\\d{1,2})\\b",
+   "queue": "Work queue: 943 rows in 79 units, about 79 check-ins (W34, 2026-10-06T03:42:48Z)"
   },
   {
    "key": "grok-c",
    "lane": "Grok C",
-   "route": "grok.com thread a84d8cbb",
+   "route": "Grok Web thread C · grok.com thread a84d8cbb",
    "focus": "Revenue (drafts only, no lead PII)",
    "current": "G3 revenue drafts",
-   "board_agent": "Grok C (Heavy 4.7)"
+   "board_agent": "Grok Web",
+   "thread": "C",
+   "thread_match": "\\b(?:GC\\d|C\\d{1,2}|RF\\d{1,2})\\b",
+   "queue": "Work queue: 510 rows in 43 units, about 43 check-ins (W34, 2026-10-06T03:42:48Z)"
   },
   {
    "key": "grok-kb",
    "lane": "Grok KB",
-   "route": "grok.com thread 32d72a02",
+   "route": "Grok Web thread KB · grok.com thread 32d72a02",
    "focus": "KB vault",
    "current": "D1 subfolders, manifests, Meet transcripts",
-   "board_agent": null
+   "board_agent": "Grok Web",
+   "thread": "KB",
+   "thread_match": "\\b(?:GK\\d|KB\\d*|D\\d{1,2})\\b",
+   "queue": "Work queue: 118 rows in 10 units, about 10 check-ins (W34, 2026-10-06T03:42:48Z)"
   },
   {
-   "key": "dot",
-   "lane": "Dot",
-   "route": "chatgpt.com/dots (tab-3)",
-   "focus": "Cross-family grading + Trail verify",
-   "current": "D1-D4",
-   "board_agent": "Dot"
+   "key": "grok-e",
+   "lane": "Grok E",
+   "route": "Grok Web thread E · grok.com (browser tab-2)",
+   "focus": "Notion coverage sweep: unrouted open Sprint rows",
+   "current": "Notion coverage sweep (W34 work queue)",
+   "board_agent": "Grok Web",
+   "thread": "E",
+   "thread_match": "\\b(?:GE\\d|E\\d{1,2})\\b",
+   "queue": "Work queue: 303 rows in 26 units, about 26 check-ins (W34, 2026-10-06T03:42:48Z)"
   },
   {
    "key": "dash",
@@ -58,7 +75,17 @@
    "route": "muse.ai (tab-1) via mack-dash-send.sh",
    "focus": "Personal-assistant ops: responsiveness, dashboard QA, Bennett packets",
    "current": "H1-H4",
-   "board_agent": "Dash"
+   "board_agent": "Dash",
+   "queue": "Work queue: 41 rows in 8 units, about 8 check-ins (W34, 2026-10-06T03:42:48Z)"
+  },
+  {
+   "key": "dot",
+   "lane": "Dot",
+   "route": "chatgpt.com/dots (tab-3)",
+   "focus": "Cross-family grading + Trail verify",
+   "current": "D1-D4",
+   "board_agent": "Dot",
+   "queue": "Work queue: 94 rows in 8 units, about 8 check-ins (W34, 2026-10-06T03:42:48Z)"
   },
   {
    "key": "laya",
@@ -66,7 +93,8 @@
    "route": "Studio com.fki.laya-worker JSON job queue",
    "focus": "Yes/no classification + scoring only (no prose)",
    "current": "find-buyers backlog",
-   "board_agent": "Laya (Studio)"
+   "board_agent": "Laya (Studio)",
+   "queue": "Work queue: 189 rows in 16 units, about 16 check-ins (W34, 2026-10-06T03:42:48Z)"
   },
   {
    "key": "qwen",
@@ -74,7 +102,8 @@
    "route": "Studio ollama qwen3 via fleet-ssh + W25 thread runner",
    "focus": "Drafting, summarising, code review",
    "current": "none",
-   "board_agent": "Qwen (Studio)"
+   "board_agent": "Qwen (Studio)",
+   "queue": "Work queue: 269 rows in 23 units, about 23 check-ins (W34, 2026-10-06T03:42:48Z)"
   },
   {
    "key": "gemma",
@@ -82,7 +111,8 @@
    "route": "Studio ollama gemma3:27b via fleet-ssh + W25 thread runner",
    "focus": "Second-opinion review + batch summaries",
    "current": "none",
-   "board_agent": "Gemma (Studio)"
+   "board_agent": "Gemma (Studio)",
+   "queue": "Work queue: 257 rows in 22 units, about 22 check-ins (W34, 2026-10-06T03:42:48Z)"
   }
  ],
  "projects": [
@@ -107,6 +137,8 @@
    ],
    "eta_hours": 36,
    "protected_steps": [],
+   "status": "Planned · no check-in names GA1 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -130,6 +162,8 @@
    ],
    "eta_hours": 24,
    "protected_steps": [],
+   "status": "Planned · no check-in names GA2 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -153,6 +187,8 @@
    ],
    "eta_hours": 48,
    "protected_steps": [],
+   "status": "Planned · no check-in names GA3 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -175,6 +211,8 @@
    ],
    "eta_hours": 12,
    "protected_steps": [],
+   "status": "Planned · no check-in names GA4 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -197,6 +235,8 @@
    ],
    "eta_hours": 24,
    "protected_steps": [],
+   "status": "Planned · no check-in names GB1 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -220,6 +260,8 @@
    ],
    "eta_hours": 48,
    "protected_steps": [],
+   "status": "Planned · no check-in names GB2 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -243,6 +285,8 @@
    ],
    "eta_hours": 12,
    "protected_steps": [],
+   "status": "Planned · no check-in names GB3 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -269,6 +313,8 @@
     "needs Bennett: director-3 sign-in code paste",
     "needs Bennett: root harness allowlist items"
    ],
+   "status": "Planned · no check-in names GB4 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -290,6 +336,8 @@
    "protected_steps": [
     "needs Bennett: any send of any draft"
    ],
+   "status": "Planned · no check-in names GC1 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -314,6 +362,8 @@
    "protected_steps": [
     "needs Bennett: loading into GHL or sending"
    ],
+   "status": "Planned · no check-in names GC2 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -339,6 +389,8 @@
    "protected_steps": [
     "needs Bennett: publishing or sending"
    ],
+   "status": "Planned · no check-in names GC3 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -361,6 +413,8 @@
    ],
    "eta_hours": 18,
    "protected_steps": [],
+   "status": "Planned · no check-in names GK1 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -383,6 +437,8 @@
    ],
    "eta_hours": 18,
    "protected_steps": [],
+   "status": "Planned · no check-in names GK2 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -405,6 +461,8 @@
    ],
    "eta_hours": 48,
    "protected_steps": [],
+   "status": "Planned · no check-in names GK3 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -426,6 +484,8 @@
    ],
    "eta_hours": 12,
    "protected_steps": [],
+   "status": "Planned · no check-in names GK4 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -449,21 +509,23 @@
    ],
    "eta_hours": 24,
    "protected_steps": [],
+   "status": "Planned · no check-in names DT1 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
    "id": "DT2",
    "lane": "Dot",
    "title": "Red-team, EP and ask yourself receipts",
-   "goal": "Run red-team, EP, ask yourself and the overnight/task assist checks on the dashboard and save one receipt each.",
-   "done_test": "6 receipt files (red-team, ep, ask yourself, ai-overnight, ai-task assist, MAH red-team) each with findings and a verdict.",
+   "goal": "Run red-team, EP, ask yourself and the overnight/task-assist checks on the dashboard and save one receipt each.",
+   "done_test": "6 receipt files (red-team, ep, ask yourself, ai-overnight, ai-task-assist, MAH red-team) each with findings and a verdict.",
    "proof_type": "6 receipt files (LIVE-AGENT)",
    "subagents": [
     "red-team",
     "ep",
     "ask yourself",
     "ai-overnight",
-    "ai-task assist"
+    "ai-task-assist"
    ],
    "first_3_tasks": [
     "Fetch the public dashboard",
@@ -472,6 +534,8 @@
    ],
    "eta_hours": 24,
    "protected_steps": [],
+   "status": "Planned · no check-in names DT2 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -495,6 +559,8 @@
    ],
    "eta_hours": 48,
    "protected_steps": [],
+   "status": "Planned · no check-in names DT3 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -517,6 +583,8 @@
    ],
    "eta_hours": 18,
    "protected_steps": [],
+   "status": "Planned · no check-in names DT4 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -540,6 +608,8 @@
    ],
    "eta_hours": 24,
    "protected_steps": [],
+   "status": "Planned · no check-in names DS1 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -562,6 +632,8 @@
    ],
    "eta_hours": 48,
    "protected_steps": [],
+   "status": "Planned · no check-in names DS2 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -586,6 +658,8 @@
     "needs Bennett: choose rebuild end time",
     "needs Bennett: confirm what 'run a' meant"
    ],
+   "status": "Planned · no check-in names DS3 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -608,6 +682,8 @@
    ],
    "eta_hours": 24,
    "protected_steps": [],
+   "status": "Planned · no check-in names DS4 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -629,6 +705,8 @@
    ],
    "eta_hours": 24,
    "protected_steps": [],
+   "status": "Planned · no check-in names LY1 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -651,6 +729,8 @@
    ],
    "eta_hours": 24,
    "protected_steps": [],
+   "status": "Planned · no check-in names LY2 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -672,6 +752,8 @@
    ],
    "eta_hours": 36,
    "protected_steps": [],
+   "status": "Planned · no check-in names LY3 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -693,6 +775,8 @@
    ],
    "eta_hours": 36,
    "protected_steps": [],
+   "status": "Planned · no check-in names LY4 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -714,6 +798,8 @@
    ],
    "eta_hours": 24,
    "protected_steps": [],
+   "status": "Planned · no check-in names LY5 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -735,6 +821,8 @@
    ],
    "eta_hours": 18,
    "protected_steps": [],
+   "status": "Planned · no check-in names QW1 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -756,6 +844,8 @@
    ],
    "eta_hours": 30,
    "protected_steps": [],
+   "status": "Planned · no check-in names QW2 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -777,6 +867,8 @@
    ],
    "eta_hours": 12,
    "protected_steps": [],
+   "status": "Planned · no check-in names QW3 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -798,6 +890,8 @@
    ],
    "eta_hours": 36,
    "protected_steps": [],
+   "status": "Planned · no check-in names GM1 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -819,6 +913,8 @@
    ],
    "eta_hours": 48,
    "protected_steps": [],
+   "status": "Planned · no check-in names GM2 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   },
   {
@@ -840,6 +936,8 @@
    ],
    "eta_hours": 12,
    "protected_steps": [],
+   "status": "Planned · no check-in names GM3 yet",
+   "hours_left": 47.1,
    "latest_proof": null
   }
  ]

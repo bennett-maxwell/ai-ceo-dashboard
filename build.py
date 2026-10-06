@@ -283,7 +283,7 @@ def snapshot():
                       "checkins": coverage["unique_rows"], "checkins_feed_rows": len(feed), "aiceo": len(snap["aiceo"]),
                       "checkin_status": status_counts(reports)}
     snap["asks"] = load_asks()
-    snap["fleet"] = load_fleet()
+    snap["fleet"] = fleet_status(load_fleet(), reports, snap["agents"], snap["projects"])
     return snap
 
 def load_fleet(path="agents48.json"):
@@ -291,14 +291,52 @@ def load_fleet(path="agents48.json"):
     Only these keys reach the page, and the snapshot still goes through exclude() and scrub()."""
     p = Path(path)
     if not p.exists():
-        return {"lanes": [], "projects": [], "hard_lines": [], "updated": None, "window": None}
+        return {"lanes": [], "projects": [], "hard_lines": [], "updated": None, "window": None,
+                "window_end": None, "status_as_of": None}
     raw = json.loads(p.read_text())
-    lane_keys = ("key", "lane", "route", "focus", "current", "board_agent")
+    lane_keys = ("key", "lane", "route", "focus", "current", "board_agent", "thread", "thread_match", "queue")
     proj_keys = ("id", "lane", "title", "goal", "done_test", "proof_type", "subagents", "first_3_tasks",
-                 "eta_hours", "protected_steps", "latest_proof")
-    return {"updated": raw.get("updated"), "window": raw.get("window"), "hard_lines": raw.get("hard_lines") or [],
+                 "eta_hours", "protected_steps", "status", "hours_left", "last_checkin", "latest_proof")
+    return {"updated": raw.get("updated"), "window": raw.get("window"), "window_end": raw.get("window_end"),
+            "status_as_of": raw.get("status_as_of"), "hard_lines": raw.get("hard_lines") or [],
             "lanes": [{k: l.get(k) for k in lane_keys} for l in raw.get("lanes") or []],
             "projects": [{k: q.get(k) for k in proj_keys} for q in raw.get("projects") or []]}
+
+def fleet_status(fleet, reports, agents, projects, at=None):
+    """Fill each 48-hour project's live status, hours left and latest proof at build time (W29 fix 4).
+    Evidence is a check-in whose Doing now or Proof names the project id (GA1, DT2, ...) or that links the hub
+    Projects row titled with that id. With no such check-in the committed values stay, so nothing is invented."""
+    at = at or datetime.datetime.now(datetime.timezone.utc)
+    names = {a["url"]: a.get("Agent") or "unknown agent" for a in agents}
+    end = timestamp(fleet.get("window_end"))
+    for q in fleet.get("projects") or []:
+        pid_ = str(q.get("id") or "")
+        if not pid_:
+            continue
+        word = re.compile(r"(?<![A-Za-z0-9])" + re.escape(pid_) + r"(?![A-Za-z0-9])")
+        hub = [p for p in projects if word.match(str(p.get("Project") or "").strip())]
+        hub_ids = {p["url"] for p in hub}
+        hits = [r for r in reports if timestamp(r.get("Logged")) is not None and (
+                word.search(" ".join(str(r.get(k) or "") for k in ("Doing now", "Proof")))
+                or hub_ids & set(r.get("Project") or []))]
+        hits.sort(key=lambda r: timestamp(r["Logged"]), reverse=True)
+        last = hits[0] if hits else None
+        if hub and hub[0].get("Status"):
+            q["status"] = f"{hub[0]['Status']} (hub project row)"
+        elif last:
+            q["status"] = f"{str(last.get('Status') or 'Reported').capitalize()} · {len(hits)} check-in{'s' if len(hits) != 1 else ''}"
+        if last:
+            q["last_checkin"] = last.get("Logged")
+            proof = str(last.get("Proof") or "").strip()
+            who = ", ".join(names.get(i, "unlinked agent") for i in (last.get("Agent") or [])) or "unlinked agent"
+            if proof.startswith("https://"):
+                q["latest_proof"] = {"text": f"{who} · {last.get('Logged')}", "url": proof}
+            elif proof:
+                q["latest_proof"] = {"text": f"{who} · {last.get('Logged')} · {proof[:160]}"}
+        if end is not None:
+            q["hours_left"] = round(max(0.0, (end - at).total_seconds() / 3600), 1)
+    fleet["status_as_of"] = at.isoformat().replace("+00:00", "Z")
+    return fleet
 
 def load_asks(path="asks.json"):
     """Bennett's asks, lane owners and Needs-you rows, hand-kept in a committed file. Only these keys

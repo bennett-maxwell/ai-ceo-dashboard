@@ -206,8 +206,8 @@ class FleetTests(unittest.TestCase):
     def test_fleet_file_loads_and_survives_scrub_unchanged(self):
         # The Agents tab reads agents48.json; the public scrub must not need to touch it.
         fleet = build.load_fleet()
-        self.assertEqual(len(fleet['lanes']), 9); self.assertEqual(len(fleet['projects']), 34)
-        self.assertEqual(set(fleet), {'lanes', 'projects', 'hard_lines', 'updated', 'window'})
+        self.assertEqual(len(fleet['lanes']), 10); self.assertEqual(len(fleet['projects']), 34)
+        self.assertEqual(set(fleet), {'lanes', 'projects', 'hard_lines', 'updated', 'window', 'window_end', 'status_as_of'})
         lanes = {l['lane'] for l in fleet['lanes']}
         self.assertTrue(all(q['lane'] in lanes for q in fleet['projects']))
         _, hits = build.scrub({'fleet': fleet}, [])
@@ -215,5 +215,32 @@ class FleetTests(unittest.TestCase):
 
     def test_missing_fleet_file_renders_empty_not_crash(self):
         self.assertEqual(build.load_fleet('no-such-file.json')['lanes'], [])
+
+    def test_fleet_status_fills_from_check_ins_naming_the_project(self):
+        # W29 fix 4: status, hours left and latest proof come from check-ins that name the project id
+        # (or link its hub Projects row); a project nobody names keeps its committed "none yet" values.
+        import datetime as dt
+        fleet = build.load_fleet()
+        agents = [{'url': 'a' * 32, 'Agent': 'Grok Web'}]
+        hub = [{'url': 'p' * 32, 'Project': 'GC1 · fleet status check-ins', 'Status': 'In progress'}]
+        reports = [
+            {'url': 'r1', 'Agent': ['a' * 32], 'Logged': '2026-10-06T03:10:00Z', 'Status': 'WORKING',
+             'Doing now': 'GA1: 5 rows filled', 'Proof': 'https://www.notion.so/x', 'Project': []},
+            {'url': 'r2', 'Agent': ['a' * 32], 'Logged': '2026-10-06T03:00:00Z', 'Status': 'READY',
+             'Doing now': 'GA1 list posted', 'Proof': 'https://www.notion.so/old', 'Project': []},
+            {'url': 'r3', 'Agent': ['a' * 32], 'Logged': '2026-10-06T03:05:00Z', 'Status': 'READY',
+             'Doing now': 'draft', 'Proof': 'file:///tmp/r3.txt', 'Project': ['p' * 32]},
+            {'url': 'r4', 'Agent': ['a' * 32], 'Logged': '2026-10-06T03:20:00Z', 'Status': 'WORKING',
+             'Doing now': 'GA10 rows (a different project)', 'Proof': 'https://www.notion.so/no', 'Project': []}]
+        at = dt.datetime(2026, 10, 6, 4, 52, 57, tzinfo=dt.timezone.utc)
+        out = build.fleet_status(fleet, reports, agents, hub, at)
+        p = {q['id']: q for q in out['projects']}
+        self.assertEqual(p['GA1']['status'], 'Working · 2 check-ins')
+        self.assertEqual(p['GA1']['latest_proof'], {'text': 'Grok Web · 2026-10-06T03:10:00Z', 'url': 'https://www.notion.so/x'})
+        self.assertEqual(p['GC1']['status'], 'In progress (hub project row)')
+        self.assertEqual(p['GC1']['latest_proof']['text'], 'Grok Web · 2026-10-06T03:05:00Z · file:///tmp/r3.txt')
+        self.assertEqual(p['GA2']['status'], 'Planned · no check-in names GA2 yet'); self.assertIsNone(p['GA2']['latest_proof'])
+        self.assertTrue(all(q['hours_left'] == 46.0 for q in out['projects']))
+        self.assertEqual(out['status_as_of'], '2026-10-06T04:52:57Z')
 
 if __name__=='__main__': unittest.main()
