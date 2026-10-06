@@ -1,9 +1,12 @@
 name: Dashboard heartbeat
-# Cloud dispatcher: asks dashboard.yml for a rebuild about every 10 minutes, then starts the next heartbeat.
+# Cloud dispatcher: asks dashboard.yml for a rebuild about every 4-5 minutes (sleep 240), then starts the next heartbeat.
 # GitHub's own cron is best-effort (observed hours apart), so it only reseeds the chain if it ever breaks.
 # Only one heartbeat runs at a time: the concurrency group keeps at most one waiting run, so chains never multiply.
 # Stop it any time with: gh workflow disable heartbeat.yml -R bennett-maxwell/ai-ceo-dashboard
-# It stops by itself at the run deadline below. It uses only the built-in workflow token.
+# No run deadline: the 2026-10-07T00:00:00Z shutoff was removed 2026-10-06 per Bennett 10/5 19:29 ("improve them all
+# permanently and run them") and FLEET SHIP ORDER item 1 (cut the wait from 9 to 4 minutes and remove the shutoff).
+# Cost basis: the repo is public, so GitHub-hosted Actions minutes are $0. The end condition is the disable command above.
+# It uses only the built-in workflow token.
 on:
   workflow_dispatch: {}
   schedule: [{cron: "3,13,23,33,43,53 * * * *"}]
@@ -16,25 +19,14 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      DEADLINE: "2026-10-07T00:00:00Z"
     steps:
-      - name: Stop after the run deadline
-        id: gate
-        run: |
-          if [ "$(date -u +%s)" -ge "$(date -u -d "$DEADLINE" +%s)" ]; then
-            echo "Past $DEADLINE: nothing to do."
-            echo "go=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "go=true" >> "$GITHUB_OUTPUT"
-          fi
       - name: Rebuild the dashboard
-        if: steps.gate.outputs.go == 'true'
         run: gh workflow run dashboard.yml --ref main
       # The wait and the next heartbeat still happen if the rebuild request fails, so one bad call never ends the
       # chain and never makes it spin fast. Cancelling this run by hand ends the chain.
-      - name: Wait about ten minutes
-        if: ${{ !cancelled() && steps.gate.outputs.go == 'true' }}
-        run: sleep 540
+      - name: Wait about four minutes
+        if: ${{ !cancelled() }}
+        run: sleep 240
       - name: Start the next heartbeat
-        if: ${{ !cancelled() && steps.gate.outputs.go == 'true' }}
+        if: ${{ !cancelled() }}
         run: gh workflow run heartbeat.yml --ref main

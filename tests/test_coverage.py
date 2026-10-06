@@ -34,8 +34,37 @@ class CoverageTests(unittest.TestCase):
     def test_missing_links_explicit_and_primary_ids_not_name_inferred(self):
         r=self.report('missing');r['Agent']=None;r['Device']=['unknown'];r['Project']=['unknown']
         _,c=self.coverage([r]);self.assertEqual(c['unlinked_rows'],1);self.assertEqual(c['unknown_device_links'],1);self.assertEqual(c['unknown_project_links'],1)
-        self.assertEqual(len(build.PRIMARY_AGENT_IDS),6);self.assertNotIn('3edcf5514fd381c18e9ad31f16369f38',build.PRIMARY_AGENT_IDS)
         self.assertNotIn('3edcf5514fd3811ebc43c50933e8a73b',build.PRIMARY_AGENT_IDS)
+    def test_primary_ids_are_dash_dot_hank_plus_recent_mack_and_never_retired(self):
+        # Agents-DB page ids checked 2026-10-06 (Agents data source a2ee467b-2657-4173-b36e-df538f6e35e3).
+        dash,dot,hank,mack='3edcf5514fd3812ea137d3ce41dafab3','3edcf5514fd381c18e9ad31f16369f38','3edcf5514fd3815aa780ca4aff45c771','3edcf5514fd381d7a91dd8a7bdcccb87'
+        retired={'3edcf5514fd381759f9bee1cfade7819':'Grok ST','3edcf5514fd381659d38cbb6d9a1a51a':'Rocky'}
+        self.assertEqual(build.PRIMARY_AGENT_IDS,(dash,dot,hank,mack))
+        for rid,name in retired.items():self.assertNotIn(rid,build.PRIMARY_AGENT_IDS,name)
+        self.assertEqual(len(set(build.PRIMARY_AGENT_IDS)),len(build.PRIMARY_AGENT_IDS))
+        self.assertTrue(all(len(i)==32 and '-' not in i for i in build.PRIMARY_AGENT_IDS))
+    def test_picked_up_variants_normalize_for_display_and_counts(self):
+        for raw in ['PICKED_UP','PICKED-UP','PICKED','PICKEDUP','PICKED UP','picked up',' Picked_Up ']:
+            self.assertEqual(build.norm_status(raw),'PICKED UP',raw)
+        for raw in ['WORKING','PICKING','UNPICKED','PICKED UPDATE','',None]:
+            self.assertEqual(build.norm_status(raw),raw)
+        reports=[{'Status':s} for s in ['PICKED_UP','PICKED_UP','PICKED-UP','PICKED','PICKEDUP','PICKED UP','WORKING',None]]
+        self.assertEqual(build.status_counts(reports),{'PICKED UP':6,'No status':1,'WORKING':1})
+    def test_rows_normalize_checkin_status_but_not_other_sources(self):
+        page={'id':'row','properties':{'Status':{'type':'select','select':{'name':'PICKED_UP'}}}}
+        with patch.object(build,'q',return_value=[page]):
+            self.assertEqual(build.rows('checkins')[0]['Status'],'PICKED UP')
+    def test_project_checkins_use_complete_scan_and_ignore_future_or_bad_logged(self):
+        now=datetime.datetime(2026,10,4,21,0,tzinfo=datetime.timezone.utc)
+        reports=[{'url':'1','Project':['p1'],'Logged':'2026-10-04T20:30:00Z'},{'url':'2','Project':['p1','p2'],'Logged':'2026-10-04T20:50:00Z'},
+                 {'url':'3','Project':['p2'],'Logged':'2026-10-05T03:00:00Z'},{'url':'4','Project':['p3'],'Logged':'bad'},{'url':'5','Project':None,'Logged':'2026-10-04T20:59:00Z'}]
+        out=build.project_checkins(reports,now)
+        self.assertEqual(out,{'p1':{'latest_logged':'2026-10-04T20:50:00Z','rows':2},'p2':{'latest_logged':'2026-10-04T20:50:00Z','rows':1}})
+    def test_snapshot_publishes_project_checkins_and_status_counts_over_all_rows(self):
+        reports=[dict(self.report(i),Project=['proj'],Status='PICKED_UP' if i%2 else 'WORKING') for i in range(210)]
+        s,_=self.snap(reports)
+        self.assertEqual(s['project_checkins']['proj']['rows'],210)
+        self.assertEqual(s['counts']['checkin_status'],{'PICKED UP':105,'WORKING':105})
     def snap(self,reports,tasks=()):
         calls=[]
         def fake(k,body=None,limit=None):

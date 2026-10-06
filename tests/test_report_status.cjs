@@ -34,10 +34,10 @@ test('absence labels distinguish incomplete coverage from exhaustive zero',()=>{
  assert.match(check(coverage({latest:null,matching_rows:0})).label,/Never observed as of exhaustive/);
  assert.match(check(coverage({latest:null,matching_rows:0}),'2026-10-04T19:00:00Z').label,/Live status unavailable/);
 });
-test('three-minute boundary and exact agent binding are enforced',()=>{
- assert.equal(status.WINDOW_MIN,3);assert.equal(status.SNAPSHOT_MAX_AGE_MS,30*60000);
- const c=coverage();c.latest.Time='2026-10-04T20:57:00Z';assert.equal(check(c).workerFresh,true);
- c.latest.Time='2026-10-04T20:56:59.999Z';assert.equal(check(c).workerFresh,false);
+test('six-minute boundary and exact agent binding are enforced',()=>{
+ assert.equal(status.WINDOW_MIN,6);assert.equal(status.WORKER_MAX_AGE_MS,360000);assert.equal(status.SNAPSHOT_MAX_AGE_MS,30*60000);
+ const c=coverage();c.latest.Time='2026-10-04T20:54:00Z';assert.equal(check(c).workerFresh,true);
+ c.latest.Time='2026-10-04T20:53:59.999Z';assert.equal(check(c).workerFresh,false);
  c.latest.Time='2026-10-04T20:59:00Z';c.latest.Agent=['wrong-agent'];assert.equal(check(c).workerFresh,false);assert.match(check(c).worker,/binding/);
 });
 test('both always-allow and always-block report validators fail the acceptance checks',()=>{
@@ -52,13 +52,30 @@ test('snapshot window is thirty minutes',()=>{
  assert.equal(status.snapshot('2026-10-04T20:29:59Z',NOW).available,false);
 });
 test('publication window never broadens worker freshness or current evidence',()=>{
+ assert.equal(status.EVIDENCE_MAX_AGE_MS,15*60000);
  const c=coverage();c.latest.Time='2026-10-04T20:40:00Z';
- const r=check(c);assert.equal(r.workerFresh,false);assert.equal(r.bucket,'late');assert.match(r.worker,/>3m/);
- const view=status.snapshot('2026-10-04T20:50:00Z',NOW);
+ const r=check(c);assert.equal(r.workerFresh,false);assert.equal(r.bucket,'late');assert.match(r.worker,/>6m/);
+ const view=status.snapshot('2026-10-04T20:40:00Z',NOW);
  assert.equal(view.available,true);assert.equal(view.evidenceAvailable,false);
- assert.equal(check(coverage(),'2026-10-04T20:50:00Z').bucket,'unknown');
- assert.equal(status.snapshot('2026-10-04T20:57:00Z',NOW).evidenceAvailable,true);
- assert.equal(status.snapshot('2026-10-04T20:56:59.999Z',NOW).evidenceAvailable,false);
+ assert.equal(check(coverage(),'2026-10-04T20:40:00Z').bucket,'unknown');
+ assert.equal(status.snapshot('2026-10-04T20:45:00Z',NOW).evidenceAvailable,true);
+ assert.equal(status.snapshot('2026-10-04T20:44:59.999Z',NOW).evidenceAvailable,false);
+});
+test('C01 fixture: snapshot 4 min old, agent report 1 min old at build time keeps its per-agent label',()=>{
+ const c=coverage();c.latest.Time='2026-10-04T20:55:00Z';c.latest.Logged='2026-10-04T20:55:20Z';
+ const r=status.evaluate(c,'2026-10-04T20:56:00Z',NOW);
+ assert.doesNotMatch(r.label,/Live status unavailable/);assert.match(r.label,/Fresh worker report/);
+ assert.equal(r.workerFresh,true);assert.equal(r.bucket,'fresh');
+});
+test('C01 fixture: snapshot 20 min old is labeled Live status unavailable (denial path)',()=>{
+ const c=coverage();c.latest.Time='2026-10-04T20:39:00Z';c.latest.Logged='2026-10-04T20:39:30Z';
+ const r=status.evaluate(c,'2026-10-04T20:40:00Z',NOW);
+ assert.match(r.label,/Live status unavailable/);assert.equal(r.workerFresh,false);assert.equal(r.bucket,'unknown');
+});
+test('C01 fixture: an old report inside a fresh snapshot still reads stale, never fresh',()=>{
+ const c=coverage();c.latest.Time='2026-10-04T20:45:00Z';c.latest.Logged='2026-10-04T20:45:20Z';
+ const r=status.evaluate(c,'2026-10-04T20:50:00Z',NOW);
+ assert.match(r.label,/Stale worker report/);assert.equal(r.workerFresh,false);assert.equal(r.bucket,'late');
 });
 test('clocked-out agent is excused for a day, then counted late and red',()=>{
  const recent=coverage();recent.latest.Status='Clocked out';recent.latest.Time='2026-10-04T18:00:00Z';

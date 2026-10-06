@@ -1,7 +1,9 @@
 (function(root){
  "use strict";
- // Publication age is separate from the three-minute worker evidence window.
- const WORKER_MAX_AGE_MS=3*60000,SNAPSHOT_MAX_AGE_MS=30*60000,SILENT_MAX_AGE_MS=24*3600000;
+ // Publication age is separate from the six-minute worker evidence window (Ship Order item 3).
+ // A snapshot up to EVIDENCE_MAX_AGE_MS old still yields per-agent labels; worker age is always
+ // measured against the viewer clock, so an old report still reads "Stale" (no fake freshness).
+ const WORKER_MAX_AGE_MS=6*60000,EVIDENCE_MAX_AGE_MS=15*60000,SNAPSHOT_MAX_AGE_MS=30*60000,SILENT_MAX_AGE_MS=24*3600000;
  const WINDOW_MIN=WORKER_MAX_AGE_MS/60000;
  // Every non-retired agent lands in exactly one bucket, so the bucket counts always add up to the total.
  const BUCKETS=["fresh","blocked","clocked","late","never","unverified","unknown"];
@@ -14,7 +16,7 @@
  }
  function snapshot(at,now=Date.now()){
   const built=time(at),age=built==null?null:now-built;
-  return {available:age!=null&&age>=0&&age<=SNAPSHOT_MAX_AGE_MS,evidenceAvailable:age!=null&&age>=0&&age<=WORKER_MAX_AGE_MS,age,built};
+  return {available:age!=null&&age>=0&&age<=SNAPSHOT_MAX_AGE_MS,evidenceAvailable:age!=null&&age>=0&&age<=EVIDENCE_MAX_AGE_MS,age,built};
  }
  function evaluate(coverage,builtAt,now=Date.now()){
   const last=coverage?.latest||null,view=snapshot(builtAt,now);
@@ -55,6 +57,6 @@
   (list||[]).forEach(L=>{counts.total++;counts[BUCKETS.includes(L?.bucket)?L.bucket:"unknown"]++});
   return counts;
  }
- const api={time,snapshot,evaluate,tally,BUCKETS,WORKER_MAX_AGE_MS,SNAPSHOT_MAX_AGE_MS,SILENT_MAX_AGE_MS,WINDOW_MIN};
+ const api={time,snapshot,evaluate,tally,BUCKETS,WORKER_MAX_AGE_MS,EVIDENCE_MAX_AGE_MS,SNAPSHOT_MAX_AGE_MS,SILENT_MAX_AGE_MS,WINDOW_MIN};
  if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.ReportStatus=api;
 })(globalThis);

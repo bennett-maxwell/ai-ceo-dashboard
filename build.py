@@ -79,14 +79,52 @@ def rows(k, body=None, limit=None):
             r[name] = val(props[name]) if name in props else None
         if k == "checkins" and props.get("Agent", {}).get("has_more"):
             r["_agent_relation_complete"] = False
+        if k == "checkins":
+            r["Status"] = norm_status(r.get("Status"))
         res.append(r)
     return res
 
+# Check-ins Status variants that mean the same thing. Display and counts use the canonical name; the Notion
+# rows and select options are never changed here (merging the options is a separate, proposed-only step).
+PICKED_UP_RE = re.compile(r"PICKED(?:[\s_-]*UP)?", re.IGNORECASE)
+
+def norm_status(status):
+    if not isinstance(status, str):
+        return status
+    return "PICKED UP" if PICKED_UP_RE.fullmatch(status.strip()) else status
+
+def status_counts(reports):
+    counts = {}
+    for r in reports:
+        key = norm_status(r.get("Status")) or "No status"
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+
+# Agents-DB page ids (Agents data source a2ee467b-2657-4173-b36e-df538f6e35e3), checked 2026-10-06 by Notion fetch.
+# Bennett 10/5 18:10: "Dash, Dot, and Hank run everything." Mack (Claude MB CLI) stays because it checked in
+# within 24 h (2026-10-05T14:18:48Z) and its tick loop writes Check-ins. Retired seats (Grok ST, Rocky) and seats
+# with no check-in in 24 h (Cursor MB, Grant, Brock) were removed; they still show under additional agents.
 PRIMARY_AGENT_IDS = (
-    "3edcf5514fd3812ea137d3ce41dafab3", "3edcf5514fd381d7a91dd8a7bdcccb87",
-    "3edcf5514fd3816fb3a2cc308727bde6", "3edcf5514fd38131bd00e1080bf6d826",
-    "3edcf5514fd381759f9bee1cfade7819", "3edcf5514fd381ecb7a7f9c2f8411b1d",
+    "3edcf5514fd3812ea137d3ce41dafab3",  # Dash
+    "3edcf5514fd381c18e9ad31f16369f38",  # Dot
+    "3edcf5514fd3815aa780ca4aff45c771",  # Hank
+    "3edcf5514fd381d7a91dd8a7bdcccb87",  # Mack (Claude MB CLI)
 )
+
+def project_checkins(reports, cutoff=None):
+    """Newest linked check-in per project over the complete check-in scan (not the capped feed)."""
+    cutoff = cutoff or datetime.datetime.now(datetime.timezone.utc)
+    out = {}
+    for r in reports:
+        logged = timestamp(r.get("Logged"))
+        if logged is None or logged > cutoff:
+            continue
+        for pid in r.get("Project") or []:
+            cur = out.setdefault(pid, {"latest_logged": None, "rows": 0})
+            cur["rows"] += 1
+            if cur["latest_logged"] is None or logged > timestamp(cur["latest_logged"]):
+                cur["latest_logged"] = r["Logged"]
+    return out
 
 def timestamp(value):
     if not isinstance(value, str) or "T" not in value:
@@ -229,6 +267,7 @@ def snapshot():
     snap["checkins"] = feed[:200]
     snap["report_coverage"] = coverage
     snap["primary_agents"] = list(PRIMARY_AGENT_IDS)
+    snap["project_checkins"] = project_checkins(reports)
     snap["coceo"] = rows("coceo", new, 60)
     all_tasks = rows("tasks")
     snap["tasks"] = [t for t in all_tasks if not is_done(t.get("Status"))]
@@ -239,7 +278,8 @@ def snapshot():
     snap["aiceo_coverage"] = {"state": ("available" if snap["aiceo"] else "empty") if aiceo_read else "unavailable",
                               "exhaustive": aiceo_read, "public_rows": len(snap["aiceo"]) if aiceo_read else None}
     snap["counts"] = {"agents": len(snap["agents"]), "tasks_total": len(all_tasks), "tasks_open": len(snap["tasks"]),
-                      "checkins": coverage["unique_rows"], "checkins_feed_rows": len(feed), "aiceo": len(snap["aiceo"])}
+                      "checkins": coverage["unique_rows"], "checkins_feed_rows": len(feed), "aiceo": len(snap["aiceo"]),
+                      "checkin_status": status_counts(reports)}
     return snap
 
 # Public scrub. Protected terms come only from the environment (repo secret SCRUB_TERMS) or a local
