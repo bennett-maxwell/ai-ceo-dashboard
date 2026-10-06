@@ -9,7 +9,7 @@ const PROJ='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1',PROJ2='aaaaaaaaaaaaaaaaaaaaaaaaaaa
 function run(at,complete=true,mutate=()=>{}){
  const DateFixed=class extends Date{constructor(...args){super(...(args.length?args:['2026-10-04T21:00:00Z']))}static now(){return Date.parse('2026-10-04T21:00:00Z')}};
  const element=()=>({innerHTML:'',textContent:'',style:{},addEventListener(){},classList:{toggle(){}}});
- const ids=['asks','fleet','now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
+ const ids=['grok','dash','dot','asks','fleet','now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
  const env={Date:DateFixed,URL,console,location:{href:'https://example.com/#agents',hash:'#agents',replace(){}},history:{replaceState(){}},document:{hidden:false,querySelectorAll:s=>s==='section'?sections:[],addEventListener(){}},setInterval:(f,ms)=>env.interval=ms,fetch:async()=>({ok:false}),sessionStorage:{getItem(){return null},setItem(){}}};
  ids.forEach((id,i)=>env[id]=sections[i]);['tabs','companies','fresh'].forEach(id=>env[id]=element());
  const data={primary_agents:PRIMARY,agents:[[DASH,'Dash'],[DOT,'Dot'],[HANK,'Hank'],[MACK,'Claude MB CLI'],[GRANT,'Grok MB (Grant)'],[GROKST,'Grok ST','⛔ Retired']].map(([url,Agent,Status])=>({url,Agent,Status,Projects:[],Device:[]})),devices:[],projects:[],checkins:[],report_coverage:{exhaustive:complete,unique_rows:230,unlinked_rows:1,per_agent:{}}};

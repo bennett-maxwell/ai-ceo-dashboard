@@ -7,7 +7,7 @@ const DASH='3edcf5514fd3812ea137d3ce41dafab3';
 function run(hash='',mutate=()=>{}){
  const DateFixed=class extends Date{constructor(...a){super(...(a.length?a:['2026-10-06T03:00:00Z']))}static now(){return Date.parse('2026-10-06T03:00:00Z')}};
  const element=()=>({innerHTML:'',textContent:'',style:{},addEventListener(){},classList:{toggle(){}}});
- const ids=['asks','fleet','now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
+ const ids=['grok','dash','dot','asks','fleet','now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
  const env={Date:DateFixed,URL,console,location:{href:'https://example.com/'+hash,hash,replace(){}},history:{replaceState(){}},document:{hidden:false,querySelectorAll:s=>s==='section'?sections:[],addEventListener(){}},setInterval(){},fetch:async()=>({ok:false}),sessionStorage:{getItem(){return null},setItem(){}}};
  ids.forEach((id,i)=>env[id]=sections[i]);['tabs','companies','fresh'].forEach(id=>env[id]=element());
  const fleet=JSON.parse(fs.readFileSync('agents48.json','utf8'));
@@ -19,12 +19,12 @@ function run(hash='',mutate=()=>{}){
  vm.createContext(env);vm.runInContext(src.match(/<script>([\s\S]*?)<\/script>/)[1],env);return {env,fleet};
 }
 const S=env=>vm.runInContext('S',env);
-test('Agents tab sits directly after Your asks, which stays first and default',()=>{
+test('Grok, Dash, Dot are the first three tabs; Agents sits directly after Your asks, which stays the default view',()=>{
  const html=fs.readFileSync('template.html','utf8');
- assert.match(html,/const TABS=\[\["asks","Your asks"\],\["fleet","Agents"\],/);
- assert.match(html,/<section id="asks"><\/section><section id="fleet"><\/section>/);
+ assert.match(html,/const TABS=\[\["grok","Grok"\],\["dash","Dash"\],\["dot","Dot"\],\["asks","Your asks"\],\["fleet","Agents"\],/);
+ assert.match(html,/<section id="grok"><\/section><section id="dash"><\/section><section id="dot"><\/section><section id="asks"><\/section><section id="fleet"><\/section>/);
  const {env}=run('');assert.equal(S(env).tab,'asks');
- assert.match(env.tabs.innerHTML,/^<a href="#asks" data-k="asks" class="on">Your asks<\/a><a href="#fleet" data-k="fleet" class="">Agents<\/a>/);
+ assert.match(env.tabs.innerHTML,/^<a href="#grok" data-k="grok" class="">Grok<\/a><a href="#dash" data-k="dash" class="">Dash<\/a><a href="#dot" data-k="dot" class="">Dot<\/a><a href="#asks" data-k="asks" class="on">Your asks<\/a><a href="#fleet" data-k="fleet" class="">Agents<\/a>/);
  assert.equal(S(run('#fleet').env).tab,'fleet');
  for(const k of ['now','coceo','agents','devices','projects','tasks','caio','crons'])assert.match(html,new RegExp(`\\["${k}","`),'tab kept: '+k);
 });
@@ -72,4 +72,18 @@ test('phone layout: cards and buttons are big tap targets and long routes wrap',
  const html=fs.readFileSync('template.html','utf8');
  assert.match(html,/\.fcard\{[^}]*min-height:64px[^}]*padding:16px[^}]*overflow-wrap:anywhere/);
  assert.match(html,/\.fbtn\{[^}]*min-height:44px/);
+});
+
+test('T23: Grok, Dash and Dot tabs show only their own lanes, live status and projects; Agents grid lists them first',()=>{
+ const {env,fleet}=run('#dash');assert.equal(S(env).tab,'dash');
+ const d=env.dash.innerHTML;assert.match(d,/data-lane="dash"/);assert.doesNotMatch(d,/data-lane="(dot|grok-a|laya)"/);
+ assert.match(d,/Active now · Working[\s\S]*Last check-in: 3m ago · 2026-10-06T02:57:00Z/);
+ const nd=fleet.projects.filter(q=>q.lane==='Dash').length;assert.equal((d.match(/href="#fleet=dash\//g)||[]).length,nd);
+ const g=run('#grok').env.grok.innerHTML;const gk=fleet.lanes.filter(l=>/^grok/.test(l.key));assert.ok(gk.length>0);
+ for(const l of gk)assert.ok(g.includes(`data-lane="${l.key}"`),'grok lane '+l.key);assert.doesNotMatch(g,/data-lane="(dash|dot)"/);
+ const t=run('#dot').env.dot.innerHTML;assert.match(t,/data-lane="dot"/);assert.match(t,/Last check-in: pending first tick/);
+ const h=run('#fleet').env.fleet.innerHTML,order=[...h.matchAll(/data-lane="([a-z0-9-]+)"/g)].map(m=>m[1]);
+ const rank=k=>/^grok/.test(k)?0:k==='dash'?1:k==='dot'?2:3;
+ assert.deepEqual(order,[...order].sort((a,b)=>rank(a)-rank(b)));assert.equal(order.length,fleet.lanes.length);
+ assert.equal(order.indexOf('dash')+1,order.indexOf('dot'));
 });
