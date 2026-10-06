@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: python3 -m unittest discover -s tests -v
       - run: node --test tests/*.cjs
+      - run: python3 tests/self_check.py
       - run: python3 build.py
         # SCRUB_TERMS is a repo secret (one term per line); it is never committed and Actions masks it in logs.
         env: {NOTION_TOKEN: "${{ secrets.NOTION_TOKEN }}", SCRUB_TERMS: "${{ secrets.SCRUB_TERMS }}"}

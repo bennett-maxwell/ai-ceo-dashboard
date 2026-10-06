@@ -31,7 +31,7 @@ PUBLIC_FIELDS = {
     "agents": ("Agent", "Status", "Platform", "Role", "Device", "Projects"),
     "devices": ("Device", "Type"),
     "projects": ("Project", "Company", "Status", "Progress %", "Last %", "Finish condition"),
-    "checkins": ("Agent", "Logged", "Time", "Status", "Doing now", "Project", "Proof", "Device", "Blocker question"),
+    "checkins": ("Check-in", "Agent", "Logged", "Time", "Status", "Doing now", "Project", "Proof", "Device", "Blocker question"),
     "crons": ("Routine", "State", "Cadence", "Runs on", "Defined in"),
     "caio": ("Division", "Status", "Covers", "Projects", "Order"),
     "fat20": ("Rank", "Item", "Status", "Progress %"),
@@ -39,13 +39,20 @@ PUBLIC_FIELDS = {
     "tasks": ("Focus", "Name", "Owner", "Status", "Progress %"),
 }
 
+def notion_id(i, route="databases"):
+    """data_sources (2025-09-03) 404s on dash-stripped ids; keep other routes as the caller sent them."""
+    raw = str(i).replace("-", "")
+    if route == "data_sources" and re.fullmatch(r"[0-9a-f]{32}", raw):
+        return f"{raw[:8]}-{raw[8:12]}-{raw[12:16]}-{raw[16:20]}-{raw[20:]}"
+    return i
+
 def q(i, body, limit=None, route="databases", version="2022-06-28"):
     out, cur, seen_cursors = [], None, set()
     while True:
         size = min(100, limit - len(out)) if limit else 100
         b = dict(body, page_size=size, **({"start_cursor": cur} if cur else {}))
         r = urllib.request.Request(
-            f"https://api.notion.com/v1/{route}/{i}/query", json.dumps(b).encode(),
+            f"https://api.notion.com/v1/{route}/{notion_id(i, route)}/query", json.dumps(b).encode(),
             {"Authorization": f"Bearer {os.environ['NOTION_TOKEN']}",
              "Notion-Version": version, "Content-Type": "application/json"})
         with urllib.request.urlopen(r, timeout=30) as response:
@@ -82,11 +89,18 @@ def rows(k, body=None, limit=None):
         res.append(r)
     return res
 
-PRIMARY_AGENT_IDS = (
-    "3edcf5514fd3812ea137d3ce41dafab3", "3edcf5514fd381d7a91dd8a7bdcccb87",
-    "3edcf5514fd3816fb3a2cc308727bde6", "3edcf5514fd38131bd00e1080bf6d826",
-    "3edcf5514fd381759f9bee1cfade7819", "3edcf5514fd381ecb7a7f9c2f8411b1d",
+# Current seats, in board order. Aliases are title prefixes (case-insensitive).
+PRIMARY_AGENTS = (
+    ("3edcf5514fd381659d38cbb6d9a1a51a", ("Rocky",)),
+    ("3edcf5514fd38108b4f4e2d2e319ebe2", ("Leo",)),
+    ("3edcf5514fd381c18e9ad31f16369f38", ("Dot",)),
+    ("3edcf5514fd3815aa780ca4aff45c771", ("Hank",)),
+    ("3edcf5514fd3812ea137d3ce41dafab3", ("Dash",)),
+    ("3edcf5514fd381d7a91dd8a7bdcccb87", ("Mack CLI", "Mack")),
 )
+PRIMARY_AGENT_IDS = tuple(agent_id for agent_id, _names in PRIMARY_AGENTS)
+PRIMARY_AGENT_ALIASES = {agent_id: names for agent_id, names in PRIMARY_AGENTS}
+ACCEPT_RE = re.compile(r"\bACCEPT\b", re.I)
 
 def timestamp(value):
     if not isinstance(value, str) or "T" not in value:
@@ -96,6 +110,88 @@ def timestamp(value):
         return parsed if parsed.tzinfo is not None else None
     except ValueError:
         return None
+
+def title_prefix_match(title, name):
+    text = str(title or "").strip().lower()
+    prefix = str(name or "").strip().lower()
+    if not text or not prefix:
+        return False
+    return text.startswith(prefix) and (len(text) == len(prefix) or not text[len(prefix)].isalnum())
+
+def aliases_for(agent_id, agents):
+    names = list(PRIMARY_AGENT_ALIASES.get(agent_id, ()))
+    for agent in agents:
+        if agent.get("url") == agent_id and agent.get("Agent"):
+            names.append(agent["Agent"])
+            break
+    out, seen = [], set()
+    for name in names:
+        key = name.lower()
+        if key not in seen:
+            seen.add(key)
+            out.append(name)
+    return out
+
+def row_matches_agent(row, agent_id, names):
+    if agent_id in (row.get("Agent") or []):
+        return "relation"
+    title = row.get("Check-in")
+    for name in names:
+        if title_prefix_match(title, name):
+            return "title"
+    return None
+
+def report_identity(row):
+    agents = tuple(sorted(row.get("Agent") or []))
+    if agents:
+        return agents
+    title = str(row.get("Check-in") or "").strip().lower()
+    head = re.split(r"\s*[·\-|/]\s*", title, 1)[0].strip()
+    return ("title:" + (head or row.get("url") or ""),)
+
+def is_finished_status(status):
+    return re.sub(r"^[^A-Za-z]+", "", str(status or "")).strip().upper() == "FINISHED"
+
+def is_approval_row(row):
+    return any(ACCEPT_RE.search(str(row.get(field) or "")) for field in ("Status", "Doing now", "Check-in"))
+
+def row_seats(row, agents=()):
+    seats = set(row.get("Agent") or [])
+    title = row.get("Check-in")
+    for agent_id in set(PRIMARY_AGENT_IDS) | {a.get("url") for a in agents if a.get("url")}:
+        names = aliases_for(agent_id, agents)
+        if any(title_prefix_match(title, name) for name in names):
+            seats.add(agent_id)
+    return seats
+
+def finish_label(row, source_rows_desc, agents=()):
+    if not is_finished_status(row.get("Status")):
+        return None
+    seats = row_seats(row, agents)
+    row_time = timestamp(row.get("Logged"))
+    for other in source_rows_desc:
+        if other.get("url") == row.get("url") or not is_approval_row(other):
+            continue
+        other_seats = row_seats(other, agents)
+        other_time = timestamp(other.get("Logged"))
+        if other_seats and seats and other_seats.isdisjoint(seats) and other_time and row_time and other_time >= row_time:
+            return "accepted"
+    return "self-reported"
+
+def needs_bennett_rows(source_rows_desc, agents=()):
+    out, seen = [], set()
+    for row in source_rows_desc:
+        blocker = str(row.get("Blocker question") or "").strip()
+        approval = is_approval_row(row)
+        if (not blocker and not approval) or row["url"] in seen:
+            continue
+        seen.add(row["url"])
+        item = dict(row)
+        item["need"] = "blocker" if blocker else "approval"
+        if is_finished_status(row.get("Status")):
+            item["_finish"] = finish_label(row, source_rows_desc, agents)
+        out.append(item)
+    return out[:40]
 
 def report_coverage(reports, agents, devices, projects, cutoff=None):
     # Scan to exhaustion before limiting the activity feed. Never infer absence from a cap.
@@ -108,7 +204,13 @@ def report_coverage(reports, agents, devices, projects, cutoff=None):
     known_projects = {p["url"] for p in projects}
     per_agent = {}
     for agent_id in known_agents | set(PRIMARY_AGENT_IDS):
-        linked = [r for r in source_rows if agent_id in (r.get("Agent") or [])]
+        names = aliases_for(agent_id, agents)
+        linked, how = [], {}
+        for row in source_rows:
+            matched = row_matches_agent(row, agent_id, names)
+            if matched:
+                linked.append(row)
+                how[row["url"]] = matched
         valid = [r for r in linked if timestamp(r.get("Logged")) is not None and timestamp(r["Logged"]) <= cutoff]
         invalid = [r for r in linked if r not in valid]
         latest = valid[0] if valid else None
@@ -120,7 +222,9 @@ def report_coverage(reports, agents, devices, projects, cutoff=None):
         per_agent[agent_id] = {"agent_id": agent_id, "included": agent_id in known_agents,
                                "exhaustive": complete, "matching_rows": len(linked),
                                "invalid_receipt_rows": len(invalid), "latest_invalid_receipt": invalid[0] if invalid else None,
-                               "latest": latest, "latest_replayed": latest_replayed}
+                               "latest": latest, "latest_replayed": latest_replayed,
+                               "matched_by": how.get(latest["url"]) if latest else None,
+                               "aliases": names}
     return source_rows, {"source": DB["checkins"], "exhaustive": complete,
                          "receipt_cutoff": cutoff.isoformat().replace("+00:00", "Z"),
                          "truncated_agent_relation_rows": sum(r.get("_agent_relation_complete") is False for r in source_rows),
@@ -139,10 +243,10 @@ def collapse_heartbeats(rows_desc):
     heartbeat flood from one agent cannot crowd every other agent out of the capped feed."""
     out, last_by_agent = [], {}
     for r in rows_desc:
-        agent = tuple(sorted(r.get("Agent") or []))
+        agent = report_identity(r)
         key = (" ".join(str(r.get("Doing now") or "").split()).lower(), str(r.get("Status") or "").upper())
         prev = last_by_agent.get(agent)
-        if agent and prev is not None and prev[0] == key:
+        if agent and agent != ("title:",) and prev is not None and prev[0] == key:
             kept = prev[1]
             kept["_repeats"] = kept.get("_repeats", 1) + 1
             kept["_first_logged"] = r.get("Logged")
@@ -226,9 +330,17 @@ def snapshot():
     reports, coverage = report_coverage(all_reports, snap["agents"], snap["devices"], snap["projects"])
     feed = collapse_heartbeats(reports)
     coverage["collapsed_repeats"] = len(reports) - len(feed)
-    snap["checkins"] = feed[:200]
+    labeled = []
+    for row in feed[:200]:
+        item = dict(row)
+        if is_finished_status(item.get("Status")):
+            item["_finish"] = finish_label(item, reports, snap["agents"])
+        labeled.append(item)
+    snap["checkins"] = labeled
+    snap["needs_bennett"] = needs_bennett_rows(reports, snap["agents"])
     snap["report_coverage"] = coverage
     snap["primary_agents"] = list(PRIMARY_AGENT_IDS)
+    snap["primary_agent_names"] = {i: aliases_for(i, snap["agents"]) for i in PRIMARY_AGENT_IDS}
     snap["coceo"] = rows("coceo", new, 60)
     all_tasks = rows("tasks")
     snap["tasks"] = [t for t in all_tasks if not is_done(t.get("Status"))]
