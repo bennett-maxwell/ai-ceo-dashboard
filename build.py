@@ -283,7 +283,22 @@ def snapshot():
                       "checkins": coverage["unique_rows"], "checkins_feed_rows": len(feed), "aiceo": len(snap["aiceo"]),
                       "checkin_status": status_counts(reports)}
     snap["asks"] = load_asks()
+    snap["fleet"] = load_fleet()
     return snap
+
+def load_fleet(path="agents48.json"):
+    """The Agents tab: each working lane, its route and its 48-hour projects (plan by W23, committed file).
+    Only these keys reach the page, and the snapshot still goes through exclude() and scrub()."""
+    p = Path(path)
+    if not p.exists():
+        return {"lanes": [], "projects": [], "hard_lines": [], "updated": None, "window": None}
+    raw = json.loads(p.read_text())
+    lane_keys = ("key", "lane", "route", "focus", "current", "board_agent")
+    proj_keys = ("id", "lane", "title", "goal", "done_test", "proof_type", "subagents", "first_3_tasks",
+                 "eta_hours", "protected_steps", "latest_proof")
+    return {"updated": raw.get("updated"), "window": raw.get("window"), "hard_lines": raw.get("hard_lines") or [],
+            "lanes": [{k: l.get(k) for k in lane_keys} for l in raw.get("lanes") or []],
+            "projects": [{k: q.get(k) for k in proj_keys} for q in raw.get("projects") or []]}
 
 def load_asks(path="asks.json"):
     """Bennett's asks, lane owners and Needs-you rows, hand-kept in a committed file. Only these keys

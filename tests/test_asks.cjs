@@ -7,7 +7,7 @@ const AG='3edcf5514fd3812ea137d3ce41dafab3',PJ='c'.repeat(32),LANEP='d'.repeat(3
 function run(hash='',mutate=()=>{}){
  const DateFixed=class extends Date{constructor(...a){super(...(a.length?a:['2026-10-06T03:00:00Z']))}static now(){return Date.parse('2026-10-06T03:00:00Z')}};
  const element=()=>({innerHTML:'',textContent:'',style:{},addEventListener(){},classList:{toggle(){}}});
- const ids=['asks','now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
+ const ids=['asks','fleet','now','coceo','agents','devices','projects','tasks','caio','crons'],sections=ids.map(id=>({...element(),id}));
  const env={Date:DateFixed,URL,console,location:{href:'https://example.com/'+hash,hash,replace(){}},history:{replaceState(){}},document:{hidden:false,querySelectorAll:s=>s==='section'?sections:[],addEventListener(){}},setInterval(){},fetch:async()=>({ok:false}),sessionStorage:{getItem(){return null},setItem(){}}};
  ids.forEach((id,i)=>env[id]=sections[i]);['tabs','companies','fresh'].forEach(id=>env[id]=element());
  const asks=JSON.parse(fs.readFileSync('asks.json','utf8'));
@@ -23,7 +23,7 @@ function run(hash='',mutate=()=>{}){
 const S=env=>vm.runInContext('S',env);
 test('Your asks is the first tab and the default landing view, and #asks opens it',()=>{
  const html=fs.readFileSync('template.html','utf8');
- assert.match(html,/const TABS=\[\["asks","Your asks"\],\["now","Now"\]/);
+ assert.match(html,/const TABS=\[\["asks","Your asks"\],\["fleet","Agents"\],\["now","Now"\]/);
  assert.match(html,/<main><div id="pagewarn"><\/div><section id="asks">/);
  const {env}=run('');assert.equal(S(env).tab,'asks');assert.match(env.tabs.innerHTML,/^<a href="#asks" data-k="asks" class="on">Your asks<\/a>/);
  assert.equal(S(run('#asks').env).tab,'asks');assert.equal(S(run('#now').env).tab,'now');

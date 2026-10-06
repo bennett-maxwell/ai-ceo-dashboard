@@ -1,0 +1,846 @@
+{
+ "updated": "2026-10-06T02:52:57Z",
+ "window": "48 h from 2026-10-06",
+ "planned_by": "W23",
+ "source": "Bennett 10/5 20:55 MT ask; plan file projects-48h.json (W23)",
+ "hard_lines": [
+  "0 sends to humans",
+  "0 spend",
+  "0 deletes",
+  "no credentials",
+  "revenue = drafts only, no lead PII",
+  "protected steps tagged 'needs Bennett'"
+ ],
+ "lanes": [
+  {
+   "key": "grok-a",
+   "lane": "Grok A",
+   "route": "grok.com thread 08b4e6fc (browser tab-2)",
+   "focus": "Projects + Trail",
+   "current": "16 blank project rows + A8",
+   "board_agent": "Grok A (Heavy 4.7)"
+  },
+  {
+   "key": "grok-b",
+   "lane": "Grok B",
+   "route": "grok.com thread 88ce9298",
+   "focus": "Fleet infra",
+   "current": "G1/G2 Cursor writer",
+   "board_agent": "Grok B (Heavy 4.7)"
+  },
+  {
+   "key": "grok-c",
+   "lane": "Grok C",
+   "route": "grok.com thread a84d8cbb",
+   "focus": "Revenue (drafts only, no lead PII)",
+   "current": "G3 revenue drafts",
+   "board_agent": "Grok C (Heavy 4.7)"
+  },
+  {
+   "key": "grok-kb",
+   "lane": "Grok KB",
+   "route": "grok.com thread 32d72a02",
+   "focus": "KB vault",
+   "current": "D1 subfolders, manifests, Meet transcripts",
+   "board_agent": null
+  },
+  {
+   "key": "dot",
+   "lane": "Dot",
+   "route": "chatgpt.com/dots (tab-3)",
+   "focus": "Cross-family grading + Trail verify",
+   "current": "D1-D4",
+   "board_agent": "Dot"
+  },
+  {
+   "key": "dash",
+   "lane": "Dash",
+   "route": "muse.ai (tab-1) via mack-dash-send.sh",
+   "focus": "Personal-assistant ops: responsiveness, dashboard QA, Bennett packets",
+   "current": "H1-H4",
+   "board_agent": "Dash"
+  },
+  {
+   "key": "laya",
+   "lane": "Laya",
+   "route": "Studio com.fki.laya-worker JSON job queue",
+   "focus": "Yes/no classification + scoring only (no prose)",
+   "current": "find-buyers backlog",
+   "board_agent": null
+  },
+  {
+   "key": "qwen",
+   "lane": "Qwen",
+   "route": "Studio ollama qwen3 via fleet-ssh + W25 thread runner",
+   "focus": "Drafting, summarising, code review",
+   "current": "none",
+   "board_agent": null
+  },
+  {
+   "key": "gemma",
+   "lane": "Gemma",
+   "route": "Studio ollama gemma3:27b via fleet-ssh + W25 thread runner",
+   "focus": "Second-opinion review + batch summaries",
+   "current": "none",
+   "board_agent": null
+  }
+ ],
+ "projects": [
+  {
+   "id": "GA1",
+   "lane": "Grok A",
+   "title": "Every project linked to an owner agent",
+   "goal": "Fill the 16 blank Projects rows (incl. A8) and link the other ~30 unlinked projects so every project shows its agent on the dashboard.",
+   "done_test": "Hub Projects query returns 0 rows with blank Agent or blank Project relation; dashboard #projects count of linked == total.",
+   "proof_type": "hub rows + dashboard fetch (INTEGRATION)",
+   "subagents": [
+    "blank-row finder",
+    "agent matcher",
+    "relation writer (5 rows per check-in)",
+    "dashboard re-check",
+    "exceptions list"
+   ],
+   "first_3_tasks": [
+    "List the 16 blank rows + A8 with their ids in one check-in",
+    "Fill 5 rows, post the 5 ids",
+    "List the 30 unlinked projects with a proposed agent each"
+   ],
+   "eta_hours": 36,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GA2",
+   "lane": "Grok A",
+   "title": "Trail reconcile: last 5 days of asks",
+   "goal": "Read every Trail row 2026-10-01 to now and match it against the 29-item dashboard ask inventory so nothing Bennett asked is lost.",
+   "done_test": "A reconcile table exists with one line per Trail row and per inventory item, each tagged MATCHED / TRAIL-ONLY / INVENTORY-ONLY; counts add up to rows read.",
+   "proof_type": "reconcile file + Trail row ids (INTEGRATION)",
+   "subagents": [
+    "Trail reader (by day)",
+    "inventory matcher",
+    "gap lister",
+    "Laya LY5 cross-check",
+    "summary writer"
+   ],
+   "first_3_tasks": [
+    "Read Trail 2026-10-05 and post row count",
+    "Match those rows to the 29 inventory items",
+    "Repeat for 10-04 and 10-03"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GA3",
+   "lane": "Grok A",
+   "title": "Trail verify backfill 09-28 back to 09-01",
+   "goal": "Verify each Trail day 09-28 to 09-01 read-only and record per day how many asks were done vs unproved.",
+   "done_test": "28 check-in rows exist, each 'DAY x: N asks, D done, U unproved'; N sums to the Trail row count for that range.",
+   "proof_type": "28 hub check-in rows (INTEGRATION)",
+   "subagents": [
+    "day reader",
+    "proof checker",
+    "unproved lister",
+    "check-in writer",
+    "range totaller"
+   ],
+   "first_3_tasks": [
+    "Verify 09-28 and post the DAY row",
+    "Verify 09-27",
+    "Verify 09-26"
+   ],
+   "eta_hours": 48,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GA4",
+   "lane": "Grok A",
+   "title": "Projects tab shows only active work",
+   "goal": "Confirm as a non-builder that the dashboard Projects tab shows only active projects and list stale ones for archive.",
+   "done_test": "A list of every Projects-tab item tagged ACTIVE/STALE with last-update date; 0 STALE items visible after Mack archives (archive = standing approval, no deletes).",
+   "proof_type": "dashboard fetch before/after (INTEGRATION)",
+   "subagents": [
+    "tab reader",
+    "staleness dater",
+    "archive-candidate list",
+    "after-archive re-check"
+   ],
+   "first_3_tasks": [
+    "Fetch the public #projects view and count items",
+    "Tag each ACTIVE or STALE with its last date",
+    "Hand the STALE list to Mack for archive"
+   ],
+   "eta_hours": 12,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GB1",
+   "lane": "Grok B",
+   "title": "Every web seat writes fresh hub rows",
+   "goal": "Finish the Cursor check-in writer (G1/G2) and get one fresh hub row from each web seat (Dash, Dot, Grok) shown on the next dashboard build.",
+   "done_test": "Writer spec + 1 test row exist; hub has a row <=10 min old from Cursor, Dash, Dot and Grok; the next dashboard build shows all four.",
+   "proof_type": "spec file + 4 hub row ids + dashboard build (INTEGRATION)",
+   "subagents": [
+    "writer spec",
+    "test-row writer",
+    "seat row checker",
+    "build verifier"
+   ],
+   "first_3_tasks": [
+    "Post the writer spec draft",
+    "Write 1 test row and post its id",
+    "List each web seat's newest row age"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GB2",
+   "lane": "Grok B",
+   "title": "Check-in loop that survives the session",
+   "goal": "Design the durable route (launchd on Mack or the iMac) for the 5/10-min tick loop so it keeps running if the Claude session closes, then prove it with run history.",
+   "done_test": "tick-log has >=2 consecutive rows from the durable route with date -u stamps and send screenshots; probe at >=23:50Z 10/6 shows the loop alive or cleanly stopped at 00:00Z.",
+   "proof_type": "tick-log rows + launchctl print runs= (LIVE-AGENT)",
+   "subagents": [
+    "route designer",
+    "plist/runner spec",
+    "stop-rule check",
+    "run-history reader",
+    "23:50Z prober"
+   ],
+   "first_3_tasks": [
+    "Write the launchd plist spec for the tick loop (Mack installs)",
+    "Write the stop rule at 2026-10-07T00:00Z",
+    "Read the first 2 tick-log rows and confirm the stamps"
+   ],
+   "eta_hours": 48,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GB3",
+   "lane": "Grok B",
+   "title": "Fix the co-CEO tick DNS error",
+   "goal": "Find why coceo-mack-tick.sh fails with ENOTFOUND and give Mack the fix so the ai-ceo tick runs for real.",
+   "done_test": "3 consecutive real ticks with exit 0 in the tick log after the fix.",
+   "proof_type": "log lines rc=0 x3 (BINARY)",
+   "subagents": [
+    "log reader",
+    "host resolver check",
+    "fix proposal",
+    "Qwen QW1 review",
+    "3-tick verifier"
+   ],
+   "first_3_tasks": [
+    "Ask Mack for the last 20 log lines",
+    "Name the failing host and why it does not resolve",
+    "Write the one-line fix for Mack"
+   ],
+   "eta_hours": 12,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GB4",
+   "lane": "Grok B",
+   "title": "One-tap packet for root and sign-in items",
+   "goal": "Put every item only Bennett can do (sudo doctor, director-3 sign-in, root allowlist) into one one-tap packet, and say they are root items, not Notion items.",
+   "done_test": "One packet file lists each item with the exact tap or command; Bennett's done/not-done is recorded per item.",
+   "proof_type": "packet file (BINARY)",
+   "subagents": [
+    "item collector",
+    "command writer",
+    "plain-words checker",
+    "status tracker"
+   ],
+   "first_3_tasks": [
+    "List the root/sign-in items from W17 (#30, #61, #62, #63)",
+    "Write each as one tap or one command",
+    "Hand the packet to Mack for delivery"
+   ],
+   "eta_hours": 6,
+   "protected_steps": [
+    "needs Bennett: sudo /usr/local/fki-harness/fki-doctor",
+    "needs Bennett: director-3 sign-in code paste",
+    "needs Bennett: root harness allowlist items"
+   ],
+   "latest_proof": null
+  },
+  {
+   "id": "GC1",
+   "lane": "Grok C",
+   "title": "25 revenue drafts, scored before review",
+   "goal": "Grow G3 from 5 to 25 outreach drafts across 5 buyer segments, each scored by Laya check-messages before Bennett reviews.",
+   "done_test": "25 drafts labeled Segment/Lead A-Y, no names or contact details; each has a Laya reply/fit score; 0 sent.",
+   "proof_type": "drafts file + Laya CSV (INTEGRATION)",
+   "subagents": [
+    "segment writer x5 (one per segment)"
+   ],
+   "first_3_tasks": [
+    "Post the 5 G3 drafts already done",
+    "Name the 5 segments",
+    "Write 5 drafts for segment 1"
+   ],
+   "eta_hours": 36,
+   "protected_steps": [
+    "needs Bennett: any send of any draft"
+   ],
+   "latest_proof": null
+  },
+  {
+   "id": "GC2",
+   "lane": "Grok C",
+   "title": "Stalled-pipeline re-engagement playbook",
+   "goal": "Write a re-engagement sequence for stalled franchise opportunities so the team can restart dead deals.",
+   "done_test": "Playbook draft with 3 stall types x 4 touches each = 12 message drafts, no PII; Gemma GM1 second-opinion notes attached.",
+   "proof_type": "playbook file (BINARY)",
+   "subagents": [
+    "stall-type definer",
+    "touch writer",
+    "Gemma review handoff",
+    "compliance checker"
+   ],
+   "first_3_tasks": [
+    "Define 3 stall types from counts only",
+    "Write touch 1 for each",
+    "Hand to Gemma for review"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [
+    "needs Bennett: loading into GHL or sending"
+   ],
+   "latest_proof": null
+  },
+  {
+   "id": "GC3",
+   "lane": "Grok C",
+   "title": "Candidate nurture sequence + offer copy",
+   "goal": "Draft a 7-email nurture sequence and offer copy for franchise candidates that moves them to a booked call.",
+   "done_test": "7 email drafts + 1 offer page draft, each with a single call-to-action; Laya fit score >=0.5 on each; 0 sent.",
+   "proof_type": "drafts file + Laya CSV (INTEGRATION)",
+   "subagents": [
+    "sequence outliner",
+    "email writer",
+    "offer copy writer",
+    "Laya scoring handoff",
+    "edit pass"
+   ],
+   "first_3_tasks": [
+    "Outline the 7 emails",
+    "Write emails 1-3",
+    "Write the offer page draft"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [
+    "needs Bennett: publishing or sending"
+   ],
+   "latest_proof": null
+  },
+  {
+   "id": "GK1",
+   "lane": "Grok KB",
+   "title": "KB vault folders and index notes",
+   "goal": "Create the 22 missing KB subfolders, each with an _index note that says what belongs there.",
+   "done_test": "22 subfolders exist, each with a non-empty _index note; folder list posted with counts.",
+   "proof_type": "folder listing (INTEGRATION)",
+   "subagents": [
+    "folder creator",
+    "index writer",
+    "naming checker",
+    "listing poster"
+   ],
+   "first_3_tasks": [
+    "Post the 22 folder names",
+    "Create folders 1-5 with _index",
+    "Post the listing"
+   ],
+   "eta_hours": 18,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GK2",
+   "lane": "Grok KB",
+   "title": "Folder manifests",
+   "goal": "Give every KB folder a manifest (file count, owner, last updated) so anyone can see what is stale.",
+   "done_test": "Every folder has a manifest; manifest file counts match a fresh listing.",
+   "proof_type": "manifest files + listing (INTEGRATION)",
+   "subagents": [
+    "counter",
+    "owner finder",
+    "date stamper",
+    "mismatch lister"
+   ],
+   "first_3_tasks": [
+    "Write the manifest template",
+    "Fill manifests for 5 folders",
+    "Compare counts with a fresh listing"
+   ],
+   "eta_hours": 18,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GK3",
+   "lane": "Grok KB",
+   "title": "Meet transcripts: index the real ones",
+   "goal": "Use Laya's stub classifier (LY4) and Gemma's summaries (GM2) to index the ~230 real Meet transcripts and park the empty stubs.",
+   "done_test": "Index note lists every real transcript with date and one-line summary; stub count + real count == total read.",
+   "proof_type": "index note (INTEGRATION)",
+   "subagents": [
+    "LY4 result reader",
+    "GM2 summary reader",
+    "index writer",
+    "stub parker (no deletes)"
+   ],
+   "first_3_tasks": [
+    "Post the total transcript count",
+    "Read the first LY4 batch result",
+    "Index the first 25 real transcripts"
+   ],
+   "eta_hours": 48,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GK4",
+   "lane": "Grok KB",
+   "title": "Skill receipts library",
+   "goal": "Read the skills Bennett named (ai-comms and others) from GitHub main and file one receipt each in the KB.",
+   "done_test": "One receipt per skill with commit sha read from GitHub main; ai-comms receipt included.",
+   "proof_type": "receipt files with sha (BINARY)",
+   "subagents": [
+    "skill list builder",
+    "GitHub reader",
+    "receipt writer"
+   ],
+   "first_3_tasks": [
+    "List the skills to read",
+    "Read ai-comms skill on main and write its receipt",
+    "Do the next 2 skills"
+   ],
+   "eta_hours": 12,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "DT1",
+   "lane": "Dot",
+   "title": "Cross-family grade of the W17 table",
+   "goal": "Grade the W17 64-ask table as a non-Claude grader, so the work has a real audit and not only a same-family review.",
+   "done_test": "Dot score file: every row re-checked with a PASS/FAIL and a reason; total score; rows under 95 listed for same-run fix.",
+   "proof_type": "grade file (LIVE-AGENT)",
+   "subagents": [
+    "row checker A (1-22)",
+    "row checker B (23-43)",
+    "row checker C (44-64)",
+    "score totaller",
+    "fix lister"
+   ],
+   "first_3_tasks": [
+    "Receive the W17 table from Mack",
+    "Grade rows 1-22",
+    "Grade rows 23-43"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "DT2",
+   "lane": "Dot",
+   "title": "Red-team, EP and ask yourself receipts",
+   "goal": "Run red-team, EP, ask yourself and the overnight/task assist checks on the dashboard and save one receipt each.",
+   "done_test": "6 receipt files (red-team, ep, ask yourself, ai-overnight, ai-task assist, MAH red-team) each with findings and a verdict.",
+   "proof_type": "6 receipt files (LIVE-AGENT)",
+   "subagents": [
+    "red-team",
+    "ep",
+    "ask yourself",
+    "ai-overnight",
+    "ai-task assist"
+   ],
+   "first_3_tasks": [
+    "Fetch the public dashboard",
+    "Run red-team and post findings",
+    "Run ep and post findings"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "DT3",
+   "lane": "Dot",
+   "title": "Trail verify 07-31 back to 03-31",
+   "goal": "Verify Trail day by day from 07-31 back to its first row 03-31, read-only, one row per day.",
+   "done_test": "~122 DAY rows exist; per-batch totals reconcile to Trail row counts.",
+   "proof_type": "hub check-in rows (INTEGRATION)",
+   "subagents": [
+    "day reader",
+    "proof checker",
+    "unproved lister",
+    "row writer",
+    "batch totaller"
+   ],
+   "first_3_tasks": [
+    "Finish 07-31 to 07-25 (current D1)",
+    "Start 07-24 to 07-18",
+    "Post batch totals"
+   ],
+   "eta_hours": 48,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "DT4",
+   "lane": "Dot",
+   "title": "Seat cadence + freshness audit",
+   "goal": "Measure every seat's real check-in interval from rows and confirm each writer's newest row is <=10 min old.",
+   "done_test": "Table: one row per seat with newest row age and median interval; Dot, Hank and Grok at <=5 min, or named as failing.",
+   "proof_type": "cadence table + row ids (INTEGRATION)",
+   "subagents": [
+    "row reader",
+    "interval maths",
+    "freshness checker",
+    "Dash re-probe"
+   ],
+   "first_3_tasks": [
+    "Read the last 24 h of Check-ins",
+    "Compute the interval per seat",
+    "Re-probe Dash's newest row"
+   ],
+   "eta_hours": 18,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "DS1",
+   "lane": "Dash",
+   "title": "Agent responsiveness census",
+   "goal": "Ping every agent, capture each reply (lane accepted? subagent count?), and list who stayed silent.",
+   "done_test": "A census table: one row per agent with ping time, reply time, lanes accepted, subagent count; silent list; gma receipt.",
+   "proof_type": "census file + screenshots (LIVE-AGENT)",
+   "subagents": [
+    "pinger",
+    "reply capturer",
+    "lane-acceptance recorder",
+    "subagent counter",
+    "silent lister"
+   ],
+   "first_3_tasks": [
+    "List all agents incl. Brock, Ivan, Hank, Grok ST",
+    "Ping them and record times",
+    "Capture replies after 10 min"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "DS2",
+   "lane": "Dash",
+   "title": "Dashboard QA from Bennett's phone view",
+   "goal": "Check the public dashboard every 4 h at iPhone size: it loads, it is fresh, the Projects tab works, and no lead PII shows.",
+   "done_test": "12 QA rows over 48 h, each with HTTP code, newest build time, Projects-tab link, and PII count (must be 0).",
+   "proof_type": "QA rows (LIVE-AGENT)",
+   "subagents": [
+    "fetcher",
+    "freshness checker",
+    "projects-tab link checker",
+    "PII counter"
+   ],
+   "first_3_tasks": [
+    "Fetch the page and post HTTP code + build time",
+    "Post the #projects link for Bennett",
+    "Post the PII count"
+   ],
+   "eta_hours": 48,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "DS3",
+   "lane": "Dash",
+   "title": "Bennett corrections + decisions packet",
+   "goal": "Write one plain-words packet with the open corrections (rebuild every 4 min, not 10; correct stamps) and the decisions only Bennett can make.",
+   "done_test": "One packet file listing each correction and each decision (what 'run a' meant, rebuild end time) with 1 tap each.",
+   "proof_type": "packet file (BINARY)",
+   "subagents": [
+    "correction writer",
+    "decision lister",
+    "5th-grade checker"
+   ],
+   "first_3_tasks": [
+    "List the corrections from W17 #46",
+    "List the decisions (#59, #3)",
+    "Hand the packet to Mack"
+   ],
+   "eta_hours": 6,
+   "protected_steps": [
+    "needs Bennett: choose rebuild end time",
+    "needs Bennett: confirm what 'run a' meant"
+   ],
+   "latest_proof": null
+  },
+  {
+   "id": "DS4",
+   "lane": "Dash",
+   "title": "Every live seat clocked in; Brock + Ivan get work",
+   "goal": "Get a clock-in row from every live seat, mark dead seats Retired, and give Brock, Ivan and the local model 3-5 open Projects rows each.",
+   "done_test": "Roster: every seat is CLOCKED-IN (row id) or RETIRED; Brock, Ivan and local model each own 3-5 open Projects rows.",
+   "proof_type": "roster + row ids (INTEGRATION)",
+   "subagents": [
+    "roster reader",
+    "clock-in chaser",
+    "retire marker",
+    "project assigner"
+   ],
+   "first_3_tasks": [
+    "List live seats from the Agents roster",
+    "Chase the ones with no clock-in",
+    "Propose 3-5 rows each for Brock, Ivan, local model"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "LY1",
+   "lane": "Laya",
+   "title": "Email triage scoring",
+   "goal": "Score inbox metadata on yes/no traits (needs reply? revenue? urgent?) so the team sees what matters first.",
+   "done_test": "classify CSV with id,needs_reply,revenue,urgent for >=500 items; 0 sends; output stays on Studio.",
+   "proof_type": "CSV on Studio (BINARY)",
+   "subagents": [
+    "spec writer",
+    "queue job",
+    "CSV checker"
+   ],
+   "first_3_tasks": [
+    "Write the classify spec with 3 questions",
+    "Queue 01-email-triage.json",
+    "Check the CSV row count"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "LY2",
+   "lane": "Laya",
+   "title": "Lead-fit scoring of pipeline",
+   "goal": "Score anonymized pipeline opportunities on fit / stalled / worth re-engaging so Grok C targets the right segments.",
+   "done_test": "classify CSV keyed by anonymized id with fit,stalled,reengage for every open opportunity; no names leave Studio.",
+   "proof_type": "CSV on Studio (BINARY)",
+   "subagents": [
+    "anonymizer spec",
+    "queue job",
+    "CSV checker",
+    "segment counter"
+   ],
+   "first_3_tasks": [
+    "Write the spec with 3 questions",
+    "Queue 02-lead-fit.json",
+    "Post segment counts only"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "LY3",
+   "lane": "Laya",
+   "title": "Score Grok C drafts before review",
+   "goal": "Run check-messages on every Grok C draft so weak messages are rewritten before Bennett sees them.",
+   "done_test": "outreach.json scored; every GC1/GC3 draft has reply and fit scores; weak ones flagged.",
+   "proof_type": "CSV on Studio (BINARY)",
+   "subagents": [
+    "outreach.json builder",
+    "queue job",
+    "flag lister"
+   ],
+   "first_3_tasks": [
+    "Build outreach.json from GC1 drafts (no PII)",
+    "Queue 03-check-messages.json",
+    "Post the flag list"
+   ],
+   "eta_hours": 36,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "LY4",
+   "lane": "Laya",
+   "title": "Meet transcript stub classifier",
+   "goal": "Classify ~1,400 Meet transcripts as real or empty stub so KB indexes only the real ones.",
+   "done_test": "classify CSV with id,is_real for every transcript; real count reported to Grok KB.",
+   "proof_type": "CSV on Studio (BINARY)",
+   "subagents": [
+    "spec writer",
+    "batch queuer",
+    "count poster"
+   ],
+   "first_3_tasks": [
+    "Write the is_real spec",
+    "Queue batch 1 (200 ids)",
+    "Post real/stub counts"
+   ],
+   "eta_hours": 36,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "LY5",
+   "lane": "Laya",
+   "title": "Trail 'has proof?' classifier",
+   "goal": "Score each Trail row yes/no on 'has a proof link' and 'marked done' to speed up Grok A and Dot's verify work.",
+   "done_test": "classify CSV with row_id,has_proof,marked_done for every Trail row 03-31 to now.",
+   "proof_type": "CSV on Studio (BINARY)",
+   "subagents": [
+    "spec writer",
+    "batch queuer",
+    "mismatch lister"
+   ],
+   "first_3_tasks": [
+    "Write the spec",
+    "Queue the 10-01 to now batch",
+    "Post done-without-proof count"
+   ],
+   "eta_hours": 24,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "QW1",
+   "lane": "Qwen",
+   "title": "Code review of tick scripts and dashboard build",
+   "goal": "Review coceo-mack-tick.sh, the hub check-in writer and the dashboard build.py and list real bugs.",
+   "done_test": "Review file with each finding as file:line + fix; Gemma GM3 second opinion attached.",
+   "proof_type": "review file (BINARY)",
+   "subagents": [
+    "tick script reviewer",
+    "writer reviewer",
+    "build.py reviewer"
+   ],
+   "first_3_tasks": [
+    "Review coceo-mack-tick.sh (ENOTFOUND path)",
+    "Review build.py",
+    "Write findings file"
+   ],
+   "eta_hours": 18,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "QW2",
+   "lane": "Qwen",
+   "title": "Per-project digests for the Projects tab",
+   "goal": "Summarise each active project's history into a 3-line digest the dashboard can show.",
+   "done_test": "One digest per active project (count == active projects from GA4).",
+   "proof_type": "digest file (BINARY)",
+   "subagents": [
+    "history collector",
+    "summariser",
+    "length checker"
+   ],
+   "first_3_tasks": [
+    "Get the active list from GA4",
+    "Write digests for 10 projects",
+    "Check length <=3 lines each"
+   ],
+   "eta_hours": 30,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "QW3",
+   "lane": "Qwen",
+   "title": "Defaults-chosen list + runbook drafts",
+   "goal": "Draft the 'defaults chosen' list for the plan file and the runbook for GB2's durable loop.",
+   "done_test": "Defaults list with one line per default; runbook draft with install/verify/stop steps; Mack pastes them in.",
+   "proof_type": "draft files (BINARY)",
+   "subagents": [
+    "defaults extractor",
+    "runbook writer",
+    "plain-words pass"
+   ],
+   "first_3_tasks": [
+    "Extract defaults from plan-2026-10-05.md + rubric",
+    "Write one line per default",
+    "Draft the GB2 runbook"
+   ],
+   "eta_hours": 12,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GM1",
+   "lane": "Gemma",
+   "title": "Second opinion on revenue drafts",
+   "goal": "Review every Grok C draft for tone, false claims and PII before it reaches Bennett.",
+   "done_test": "Notes file: each draft PASS/REWRITE with reason; 0 PII found or each hit listed.",
+   "proof_type": "notes file (BINARY)",
+   "subagents": [
+    "tone checker",
+    "claims checker",
+    "PII checker"
+   ],
+   "first_3_tasks": [
+    "Read the first 5 GC1 drafts",
+    "Mark each PASS/REWRITE",
+    "Post the PII count"
+   ],
+   "eta_hours": 36,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GM2",
+   "lane": "Gemma",
+   "title": "Batch Meet transcript summaries",
+   "goal": "Summarise each real Meet transcript (from LY4) in one paragraph for the KB index.",
+   "done_test": "One summary per real transcript; count matches LY4 real count.",
+   "proof_type": "summary files (BINARY)",
+   "subagents": [
+    "batch reader",
+    "summariser",
+    "count checker"
+   ],
+   "first_3_tasks": [
+    "Wait for LY4 batch 1",
+    "Summarise first 20",
+    "Post the count"
+   ],
+   "eta_hours": 48,
+   "protected_steps": [],
+   "latest_proof": null
+  },
+  {
+   "id": "GM3",
+   "lane": "Gemma",
+   "title": "Gatekeeper on the W10 score",
+   "goal": "Run the gatekeeper check on W10's grade and on Qwen's review, as a non-Claude second opinion.",
+   "done_test": "Gatekeeper receipt with PASS/FAIL per W10 row and per QW1 finding.",
+   "proof_type": "receipt file (BINARY)",
+   "subagents": [
+    "W10 row checker",
+    "QW1 finding checker",
+    "verdict writer"
+   ],
+   "first_3_tasks": [
+    "Read the W10 score file",
+    "Check each row PASS/FAIL",
+    "Write the gatekeeper receipt"
+   ],
+   "eta_hours": 12,
+   "protected_steps": [],
+   "latest_proof": null
+  }
+ ]
+}

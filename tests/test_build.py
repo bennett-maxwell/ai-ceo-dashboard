@@ -26,7 +26,7 @@ class BuildTests(unittest.TestCase):
         self.assertNotIn('PRIVATE_SENTINEL', html)
         self.assertNotIn('Private note', html)
         self.assertIn('Visible <\\/script>', html)
-        for tab in ('asks','now','coceo','agents','devices','projects','tasks','caio','crons'):
+        for tab in ('asks','fleet','now','coceo','agents','devices','projects','tasks','caio','crons'):
             self.assertIn(f'<section id="{tab}">', html)
         self.assertIn('<meta name="robots" content="noindex, nofollow">', html)
     def test_all_tables_have_explicit_allowlists(self):
@@ -201,5 +201,19 @@ class AsksTests(unittest.TestCase):
 
     def test_missing_asks_file_renders_empty_not_crash(self):
         self.assertEqual(build.load_asks('no-such-file.json')['asks'], [])
+
+class FleetTests(unittest.TestCase):
+    def test_fleet_file_loads_and_survives_scrub_unchanged(self):
+        # The Agents tab reads agents48.json; the public scrub must not need to touch it.
+        fleet = build.load_fleet()
+        self.assertEqual(len(fleet['lanes']), 9); self.assertEqual(len(fleet['projects']), 34)
+        self.assertEqual(set(fleet), {'lanes', 'projects', 'hard_lines', 'updated', 'window'})
+        lanes = {l['lane'] for l in fleet['lanes']}
+        self.assertTrue(all(q['lane'] in lanes for q in fleet['projects']))
+        _, hits = build.scrub({'fleet': fleet}, [])
+        self.assertEqual(hits, 0)
+
+    def test_missing_fleet_file_renders_empty_not_crash(self):
+        self.assertEqual(build.load_fleet('no-such-file.json')['lanes'], [])
 
 if __name__=='__main__': unittest.main()
