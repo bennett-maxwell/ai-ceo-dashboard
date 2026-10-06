@@ -30,7 +30,7 @@ AICEO_FIELDS = ("Type", "Status", "Seat", "Graded by", "date:Date:start")
 PUBLIC_FIELDS = {
     "agents": ("Agent", "Status", "Platform", "Role", "Device", "Projects"),
     "devices": ("Device", "Type"),
-    "projects": ("Project", "Company", "Status", "Progress %", "Last %", "Finish condition"),
+    "projects": ("Project", "Company", "Status", "Progress %", "Last %", "Finish condition", "Agents"),
     "checkins": ("Agent", "Logged", "Time", "Status", "Doing now", "Project", "Proof", "Device", "Blocker question"),
     "crons": ("Routine", "State", "Cadence", "Runs on", "Defined in"),
     "caio": ("Division", "Status", "Covers", "Projects", "Order"),
@@ -77,6 +77,8 @@ def rows(k, body=None, limit=None):
         r = {"url": pg["id"].replace("-", "")}
         for name in PUBLIC_FIELDS[k]:
             r[name] = val(props[name]) if name in props else None
+        if k == "projects" and pg.get("last_edited_time"):
+            r["_edited"] = pg["last_edited_time"]  # used only to fold projects idle for 7 days
         if k == "checkins" and props.get("Agent", {}).get("has_more"):
             r["_agent_relation_complete"] = False
         if k == "checkins":

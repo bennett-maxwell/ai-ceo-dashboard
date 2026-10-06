@@ -140,3 +140,23 @@ test('C12 render: PICKED_UP, PICKED-UP, PICKED and PICKEDUP display and count as
  assert.match(env.now.innerHTML,/id="status-counts">Reported status across scanned check-ins: PICKED UP 8 · WORKING 4\./);
  assert.doesNotMatch(env.now.innerHTML,/PICKED_UP|PICKED-UP|PICKEDUP/);
 });
+
+test('projects fold into Older after 7 idle days or Done; lanes, project agents and blockers render',()=>{
+ const [P1,P2,P3,P4]=['a','b','c','d'].map(c=>c.repeat(32));
+ const env=run('2026-10-04T21:00:00Z',true,data=>{
+  data.projects=[{url:P1,Project:'Lane One',Status:'🟢 On track',Agents:[PRIMARY[0]],_edited:'2026-10-04T10:00:00Z'},
+   {url:P2,Project:'Shipped Thing',Status:'✅ Done',Agents:[],_edited:'2026-10-04T10:00:00Z'},
+   {url:P3,Project:'Old Idea',Status:'🟡 Moving',Agents:[PRIMARY[0]],_edited:'2026-09-01T10:00:00Z'},
+   {url:P4,Project:'Stuck Lane',Status:'🔴 Stuck',Agents:[],_edited:'2026-09-01T10:00:00Z'}];
+  data.project_checkins={[P3]:{latest_logged:'2026-09-20T10:00:00Z',rows:1},[P4]:{latest_logged:'2026-10-03T10:00:00Z',rows:2}};
+  data.agents[0].Projects=[P1,P3];
+  data.report_coverage.per_agent[PRIMARY[0]].latest['Blocker question']='Which ad account should be used?';
+ });
+ assert.match(env.projects.innerHTML,/Active projects \(2\)/);assert.match(env.projects.innerHTML,/Older projects \(2\)/);
+ assert.ok(env.projects.innerHTML.indexOf('Older projects')<env.projects.innerHTML.indexOf('Old Idea'));
+ assert.ok(env.projects.innerHTML.indexOf('Older projects')>env.projects.innerHTML.indexOf('Lane One'));
+ assert.match(env.projects.innerHTML,new RegExp('href="#agent='+PRIMARY[0]+'">Dash'));
+ assert.match(env.agents.innerHTML,/🧭 Lane One/);assert.doesNotMatch(env.agents.innerHTML,/Old Idea/);
+ assert.doesNotMatch(env.agents.innerHTML,/Grok ST/);
+ assert.match(env.now.innerHTML,/Which ad account should be used\?/);assert.match(env.now.innerHTML,/Stuck Lane/);
+});
