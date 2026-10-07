@@ -79,8 +79,10 @@ def rows(k, body=None, limit=None):
             r[name] = val(props[name]) if name in props else None
         if k == "projects" and pg.get("last_edited_time"):
             r["_edited"] = pg["last_edited_time"]  # used only to fold projects idle for 7 days
-        if k == "checkins" and props.get("Agent", {}).get("has_more"):
-            r["_agent_relation_complete"] = False
+        if k == "checkins":
+            for relation in ("Agent", "Project"):
+                if props.get(relation, {}).get("has_more"):
+                    r[f"_{relation.lower()}_relation_complete"] = False
         if k == "checkins":
             r["Status"] = norm_status(r.get("Status"))
         res.append(r)
@@ -125,7 +127,8 @@ def owned_work_projection(projects, reports, now=None, max_age_minutes=5):
         agent_links = [norm_id(x) for x in (r.get("Agent") or [])]
         project_links = [norm_id(x) for x in (r.get("Project") or [])]
         possible = OWNED_WORK_AGENT in agent_links and OWNED_WORK_PROJECT in project_links
-        if OWNED_WORK_PROJECT in project_links and r.get("_agent_relation_complete") is False:
+        if ((OWNED_WORK_PROJECT in project_links and r.get("_agent_relation_complete") is False)
+                or (OWNED_WORK_AGENT in agent_links and r.get("_project_relation_complete") is False)):
             uncertain = True
         if possible:
             logged = timestamp(r.get("Logged"))

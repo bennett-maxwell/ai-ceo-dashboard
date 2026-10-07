@@ -1,0 +1,34 @@
+{
+  "receipt_version": "public-dashboard-worker-06",
+  "status": "CANDIDATE",
+  "repository": "bennett-maxwell/ai-ceo-dashboard",
+  "pull_request": 3,
+  "branch": "codex/d2-owned-progress-02",
+  "exact_head_before": "53a855ba621e3ea59f7d685de0df41dd66b8cee5",
+  "base_branch": "main",
+  "exact_base_sha": "3b64997a1764e7b7ce182f2b24bb8ccd2fdf133d",
+  "review_finding": "/Users/temp/Documents/New project.nosync/receipts/20261007-ceo-clockin-repair/astra-shipping-14.json",
+  "changes": [
+    "The Notion row adapter now preserves both Agent.has_more and Project.has_more as server-only completeness flags for check-ins.",
+    "Owned-work projection fails closed when exact Agent or Project binding may be incomplete; an incomplete newer candidate cannot be bypassed in favor of an older matched report.",
+    "Public projection remains structurally allowlisted and does not serialize relation completeness flags, source row IDs, or Notion IDs."
+  ],
+  "regression_coverage": [
+    "Raw Notion-shaped relation property with Project.has_more=true survives rows(checkins) normalization as _project_relation_complete=false.",
+    "Direct incomplete Project relation and incomplete Agent relation fail closed; exact newer incomplete candidate plus older complete match remains progress=null, UNKNOWN, and not MATCHED.",
+    "Prior current-vs-project source separation, latest timestamp selection, invalid-newest, stale/future/malformed/ambiguous status, MOVING, full-page privacy, and stable identity fixtures remain covered."
+  ],
+  "verification": {
+    "python": "python3 -m unittest discover -s tests — exit 0, 64 tests",
+    "node": "for f in tests/*.cjs; do node $f; done — exit 0, 68 tests",
+    "python_compile": "python3 -m py_compile build.py tests/test_tracked_work.py tests/test_public_privacy.py — exit 0",
+    "diff_check": "git diff --check — exit 0",
+    "receipt_json": "python3 -m json.tool public-dashboard-worker-06.json — exit 0",
+    "live_source": "Not run by builder; independent grader/re-review pending",
+    "ci": "Not checked; no CI claim"
+  },
+  "gaps": [
+    "Independent reviewer must re-check relation completeness and live source projection on the exact pushed PR head.",
+    "No live Notion credentials or snapshot, merge, deployment, or main-branch write used."
+  ]
+}

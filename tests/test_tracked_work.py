@@ -1,6 +1,7 @@
 import datetime
 import json
 import unittest
+from unittest.mock import patch
 import build
 
 NOW = datetime.datetime(2026, 10, 7, 23, 50, tzinfo=datetime.timezone.utc)
@@ -41,12 +42,31 @@ class TrackedWorkTests(unittest.TestCase):
   self.assertEqual(result['project_progress'], 25)
  def test_future_malformed_and_incomplete_relation_never_claim_current(self):
   for logged, extra in [('2026-10-07T23:55:00Z', {}), ('not-a-time', {}),
-                        ('2026-10-07T23:39:00Z', {'_agent_relation_complete': False})]:
+                        ('2026-10-07T23:39:00Z', {'_agent_relation_complete': False}),
+                        ('2026-10-07T23:39:00Z', {'_project_relation_complete': False})]:
    with self.subTest(logged=logged):
     result = build.owned_work_projection([PROJECT], [report('candidate', logged, 10, **extra)], NOW)
     self.assertIsNone(result['progress'])
     self.assertEqual(result['checkin_state'], 'UNKNOWN')
     self.assertEqual(result['freshness'], 'UNKNOWN')
+ def test_raw_notion_project_has_more_survives_adapter_and_blocks_older_fallback(self):
+  page = {'id': 'private-newer-report-id', 'properties': {
+   'Agent': {'type': 'relation', 'relation': [{'id': build.OWNED_WORK_AGENT}], 'has_more': False},
+   'Project': {'type': 'relation', 'relation': [{'id': build.OWNED_WORK_PROJECT}], 'has_more': True},
+   'Logged': {'type': 'date', 'date': {'start': '2026-10-07T23:45:00Z'}},
+   'Status': {'type': 'select', 'select': {'name': '🟡 Working'}},
+   'Progress %': {'type': 'number', 'number': 10}}}
+  with patch.object(build, 'q', return_value=[page]):
+   normalized = build.rows('checkins')[0]
+  self.assertFalse(normalized.get('_agent_relation_complete', True) is False)
+  self.assertIs(normalized.get('_project_relation_complete'), False)
+  older = report('older-matched', '2026-10-07T23:40:00Z', 40)
+  result = build.owned_work_projection([PROJECT], [older, normalized], NOW)
+  self.assertIsNone(result['progress'])
+  self.assertEqual(result['progress_state'], 'UNKNOWN')
+  self.assertEqual(result['freshness'], 'UNKNOWN')
+  self.assertEqual(result['checkin_state'], 'UNKNOWN')
+  self.assertNotIn('private-newer-report-id', json.dumps(result))
  def test_equal_latest_contradictory_reports_are_ambiguous(self):
   rows = [report('one', '2026-10-07T23:45:00Z', 10), report('two', '2026-10-07T23:45:00Z', 20)]
   result = build.owned_work_projection([PROJECT], rows, NOW)
