@@ -1,5 +1,6 @@
 name: Dashboard heartbeat
-# Cloud dispatcher: asks dashboard.yml for a rebuild about every 4-5 minutes (sleep 240), then starts the next heartbeat.
+# Cloud dispatcher: asks dashboard.yml for a rebuild about every 1-2 minutes (sleep 60), then starts the next heartbeat.
+# 2026-10-07 CLI HANDOFF v2 P1-g: wait cut from 240s to 60s.
 # GitHub's own cron is best-effort (observed hours apart), so it only reseeds the chain if it ever breaks.
 # Only one heartbeat runs at a time: the concurrency group keeps at most one waiting run, so chains never multiply.
 # Stop it any time with: gh workflow disable heartbeat.yml -R bennett-maxwell/ai-ceo-dashboard
@@ -24,9 +25,9 @@ jobs:
         run: gh workflow run dashboard.yml --ref main
       # The wait and the next heartbeat still happen if the rebuild request fails, so one bad call never ends the
       # chain and never makes it spin fast. Cancelling this run by hand ends the chain.
-      - name: Wait about four minutes
+      - name: Wait about one minute
         if: ${{ !cancelled() }}
-        run: sleep 240
+        run: sleep 60
       - name: Start the next heartbeat
         if: ${{ !cancelled() }}
         run: gh workflow run heartbeat.yml --ref main
