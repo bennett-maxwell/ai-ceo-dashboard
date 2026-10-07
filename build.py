@@ -113,6 +113,32 @@ PRIMARY_AGENT_IDS = (
     "3edcf5514fd381d7a91dd8a7bdcccb87",  # Mack (Claude MB CLI)
 )
 
+# Exact owned work tuple used for server-side joins only. IDs are never emitted.
+OWNED_WORK_AGENT = "3f2cf5514fd38173bfecc443d79590d0"
+OWNED_WORK_PROJECT = "3f2cf5514fd381eebbb8f8937d504b2b"
+OWNED_WORK_CHECKIN = "3f2cf5514fd38115ae70ff9bc236df66"
+
+def owned_work_projection(projects, reports, now=None, max_age_hours=24):
+    """Privacy-safe source-bound progress; absent, mismatched, or invalid is UNKNOWN."""
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    p = next((x for x in projects if x.get("url") == OWNED_WORK_PROJECT), None)
+    linked = [r for r in reports if r.get("url") == OWNED_WORK_CHECKIN
+              and OWNED_WORK_AGENT in (r.get("Agent") or [])
+              and OWNED_WORK_PROJECT in (r.get("Project") or [])]
+    latest = max(linked, key=lambda r: timestamp(r.get("Logged")) or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc), default=None)
+    value = p.get("Progress %") if p else None
+    valid = isinstance(value, (int, float)) and not isinstance(value, bool) and 0 <= value <= 100
+    edited = p.get("_edited") if p else None
+    observed = timestamp(edited)
+    freshness = "UNKNOWN" if observed is None else ("STALE" if (now-observed).total_seconds() > max_age_hours*3600 else "FRESH")
+    return {"label":"CEO clock-in repair", "scope":"source-linked progress; not runtime or public deployment completion",
+            "progress":value if valid else None, "progress_state":"SOURCED" if valid else "UNKNOWN",
+            "status":p.get("Status") if p else None, "status_state":"SOURCED" if p and p.get("Status") else "UNKNOWN",
+            "as_of":edited, "freshness":freshness,
+            "checkin_status":latest.get("Status") if latest else None,
+            "checkin_logged":latest.get("Logged") if latest else None,
+            "checkin_state":"MATCHED" if latest else "UNKNOWN"}
+
 def project_checkins(reports, cutoff=None):
     """Newest linked check-in per project over the complete check-in scan (not the capped feed)."""
     cutoff = cutoff or datetime.datetime.now(datetime.timezone.utc)
@@ -273,6 +299,7 @@ def snapshot():
     snap = {k: rows(k) for k in DB if k not in ("checkins", "tasks", "coceo")}
     all_reports = rows("checkins", new)
     reports, coverage = report_coverage(all_reports, snap["agents"], snap["devices"], snap["projects"])
+    snap["tracked_work"] = owned_work_projection(snap["projects"], all_reports)
     feed = collapse_heartbeats(reports)
     coverage["collapsed_repeats"] = len(reports) - len(feed)
     snap["checkins"] = feed[:200]
