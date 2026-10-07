@@ -468,8 +468,214 @@ def exclude(snap, ids):
         return v
     return walk(snap), dropped
 
+PUBLIC_STATUSES = {
+    "ACK", "PICKED UP", "CLOCK-IN", "CLOCK IN", "CLOCKED OUT", "BLOCKED", "DONE", "COMPLETED",
+    "FINISHED", "IN PROGRESS", "STARTED", "READY", "PENDING", "WAITING", "PLANNED",
+    "ACTIVE", "WORKING", "ON TRACK", "PAUSED", "STUCK", "ON HOLD", "NEW", "NEEDS YOU", "NEEDS INPUT", "UNPROVED",
+    "NOT STARTED", "CANCELLED", "ARCHIVED", "PARKED", "RETIRED", "INACTIVE", "OPEN",
+    "CLOSED", "OK", "ERROR", "FAILED", "UNKNOWN", "NO STATUS", "REPORTED",
+}
+
+def _public_status(value):
+    """Status is data too: only publish a small fixed operational vocabulary."""
+    if not isinstance(value, str):
+        return "UNKNOWN"
+    key = " ".join(value.strip().upper().replace("_", " ").replace("-", " ").split())
+    if key.startswith("PICKED") and key.replace(" ", "") in {"PICKEDUP", "PICKED"}:
+        key = "PICKED UP"
+    return key if key in PUBLIC_STATUSES else "UNKNOWN"
+
+def _public_time(value):
+    parsed = timestamp(value)
+    return parsed.astimezone(datetime.timezone.utc).isoformat().replace("+00:00", "Z") if parsed else None
+
+def _public_number(value, low=None, high=None):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if not __import__("math").isfinite(value) or (low is not None and value < low) or (high is not None and value > high):
+        return None
+    return value
+
+def public_projection(snap):
+    """Structural public-data allowlist. Free text and source IDs never cross serialization.
+
+    This deliberately does not depend on SCRUB_TERMS: source titles, Doing/blocker/proof text,
+    contacts, arbitrary attributes, and Notion IDs are excluded by construction. Useful status,
+    aggregate coverage, freshness, and the separately verified owned-work percentage survive.
+    """
+    agents = snap.get("agents") or []
+    projects = snap.get("projects") or []
+    devices = snap.get("devices") or []
+    agent_ids = {str(a.get("url")): f"agent-{i:03d}" for i, a in enumerate(agents, 1) if a.get("url")}
+    project_ids = {str(p.get("url")): f"project-{i:03d}" for i, p in enumerate(projects, 1) if p.get("url")}
+    device_ids = {str(d.get("url")): f"device-{i:03d}" for i, d in enumerate(devices, 1) if d.get("url")}
+    agent_names = {str(a.get("Agent") or "").casefold(): key for a in agents
+                   if (key := agent_ids.get(str(a.get("url"))))}
+
+    def seat_label(name):
+        alias = agent_names.get(str(name or "").casefold())
+        return f"Seat {alias.split('-')[-1].lstrip('0') or '0'}" if alias else "Unknown"
+
+    def refs(values, mapping):
+        return [mapping[str(v)] for v in values or [] if str(v) in mapping]
+    out_agents = [{"url": agent_ids[str(a.get("url"))], "Agent": f"Seat {i}",
+                   "Status": _public_status(a.get("Status")), "Projects": refs(a.get("Projects"), project_ids),
+                   "Device": refs([a.get("Device")] if a.get("Device") else [], device_ids)}
+                  for i, a in enumerate(agents, 1) if str(a.get("url")) in agent_ids]
+    out_projects = [{"url": project_ids[str(p.get("url"))], "Project": f"Project {i}",
+                     "Company": "Other", "Status": _public_status(p.get("Status")),
+                     "Progress %": _public_number(p.get("Progress %"), 0, 100),
+                     "Last %": _public_number(p.get("Last %"), 0, 100),
+                     "Agents": refs(p.get("Agents"), agent_ids),
+                     "_edited": _public_time(p.get("_edited"))}
+                    for i, p in enumerate(projects, 1) if str(p.get("url")) in project_ids]
+    out_devices = [{"url": device_ids[str(d.get("url"))], "Device": f"Device {i}", "Type": "Device"}
+                   for i, d in enumerate(devices, 1) if str(d.get("url")) in device_ids]
+    coverage = snap.get("report_coverage") or {}
+    per_agent = {}
+    for raw_id, c in (coverage.get("per_agent") or {}).items():
+        alias = agent_ids.get(str(raw_id))
+        if alias is None:
+            # Preserve primary-seat coverage when a primary registration row is absent.
+            alias = f"primary-{len(per_agent)+1:03d}"
+        latest = c.get("latest") or {}
+        latest_agent_refs = refs(latest.get("Agent"), agent_ids)
+        latest_public = ({"Status": _public_status(latest.get("Status")), "Logged": _public_time(latest.get("Logged")),
+                         "Time": _public_time(latest.get("Time")), "Agent": latest_agent_refs}
+                        if latest else None)
+        invalid = c.get("latest_invalid_receipt") or {}
+        per_agent[alias] = {"agent_id": alias, "included": bool(c.get("included")),
+                            "exhaustive": bool(c.get("exhaustive")),
+                            "matching_rows": _public_number(c.get("matching_rows"), 0),
+                            "invalid_receipt_rows": _public_number(c.get("invalid_receipt_rows"), 0),
+                            "latest_invalid_receipt": ({"Logged": _public_time(invalid.get("Logged"))} if invalid else None),
+                            "latest": latest_public, "latest_replayed": bool(c.get("latest_replayed"))}
+    safe_status_counts = {}
+    for status, n in ((snap.get("counts") or {}).get("checkin_status") or {}).items():
+        safe = _public_status(status)
+        safe_status_counts[safe] = safe_status_counts.get(safe, 0) + int(_public_number(n, 0) or 0)
+    count_source = snap.get("counts") or {}
+    counts = {key: int(_public_number(count_source.get(key), 0) or 0)
+              for key in ("agents", "tasks_total", "tasks_open", "checkins", "checkins_feed_rows", "aiceo")}
+    for key, source in (("coceo", "coceo"), ("caio", "caio"), ("crons", "crons"),
+                        ("fat20", "fat20"), ("fleet_projects", "fleet"), ("asks", "asks")):
+        rows = (snap.get("fleet") or {}).get("projects") if source == "fleet" else ((snap.get("asks") or {}).get("asks") if source == "asks" else snap.get(source))
+        counts[key] = len(rows or [])
+    counts["checkin_status"] = safe_status_counts
+    out_checkins = []
+    for i, r in enumerate(snap.get("checkins") or [], 1):
+        out_checkins.append({"Agent": refs(r.get("Agent"), agent_ids), "Logged": _public_time(r.get("Logged")),
+                             "Time": _public_time(r.get("Time")), "Status": _public_status(r.get("Status")),
+                             "Project": refs(r.get("Project"), project_ids), "Device": refs(r.get("Device"), device_ids),
+                             "_repeats": int(_public_number(r.get("_repeats", 1), 1) or 1),
+                             "_first_logged": _public_time(r.get("_first_logged"))})
+    project_checkins = {}
+    for raw_id, v in (snap.get("project_checkins") or {}).items():
+        key = project_ids.get(str(raw_id))
+        if key:
+            project_checkins[key] = {"latest_logged": _public_time(v.get("latest_logged")),
+                                     "rows": _public_number(v.get("rows"), 0)}
+    tracked = snap.get("tracked_work") or {}
+    tracked_progress = _public_number(tracked.get("progress"), 0, 100)
+    out_tracked = {"label": "CEO clock-in repair", "scope": "Source-linked progress; not runtime or public deployment completion",
+                   "progress": tracked_progress, "progress_state": "SOURCED" if tracked_progress is not None and tracked.get("progress_state") == "SOURCED" else "UNKNOWN",
+                   "status": _public_status(tracked.get("status")) if tracked.get("status_state") == "SOURCED" else "UNKNOWN",
+                   "as_of": _public_time(tracked.get("as_of")),
+                   "freshness": tracked.get("freshness") if tracked.get("freshness") in {"FRESH", "STALE", "UNKNOWN"} else "UNKNOWN",
+                   "checkin_status": _public_status(tracked.get("checkin_status")),
+                   "checkin_logged": _public_time(tracked.get("checkin_logged")),
+                   "checkin_state": tracked.get("checkin_state") if tracked.get("checkin_state") in {"MATCHED", "UNKNOWN"} else "UNKNOWN"}
+    out_tasks = [{"Focus": "__YES__" if t.get("Focus") == "__YES__" else "__NO__",
+                  "Name": f"Open task {i}", "Owner": seat_label(t.get("Owner")),
+                  "Status": _public_status(t.get("Status")), "Progress %": _public_number(t.get("Progress %"), 0, 100)}
+                 for i, t in enumerate(snap.get("tasks") or [], 1)]
+    out_coceo = [{"Logged": _public_time(x.get("Logged")),
+                  "Author": refs(x.get("Author"), agent_ids), "Entry": f"Entry {i}",
+                  "Type": _public_status(x.get("Type")), "Strategy note": "Details withheld",
+                  "Audit verdict": x.get("Audit verdict") if x.get("Audit verdict") in {"AGREE", "CHALLENGE", "WRONG"} else None,
+                  "Audit of partner": x.get("Audit of partner") if x.get("Audit of partner") in {"AGREE", "CHALLENGE", "WRONG"} else None}
+                 for i, x in enumerate(snap.get("coceo") or [], 1)]
+    out_caio = [{"Division": f"Division {i}", "Status": _public_status(x.get("Status")),
+                 "Covers": "Details withheld", "Projects": refs(x.get("Projects"), project_ids),
+                 "Order": _public_number(x.get("Order"), 0)}
+                for i, x in enumerate(snap.get("caio") or [], 1)]
+    safe_cadences = {"MINUTELY", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "ONCE", "INTERVAL", "SCHEDULED"}
+    out_crons = [{"Routine": f"Routine {i}", "State": _public_status(x.get("State")),
+                  "Cadence": str(x.get("Cadence")).upper() if str(x.get("Cadence") or "").upper() in safe_cadences else "Schedule withheld",
+                  "Runs on": "Device", "Defined in": None}
+                 for i, x in enumerate(snap.get("crons") or [], 1)]
+    out_fat20 = [{"Rank": _public_number(x.get("Rank"), 0), "Item": f"Priority item {i}",
+                  "Status": _public_status(x.get("Status")), "Progress %": _public_number(x.get("Progress %"), 0, 100)}
+                 for i, x in enumerate(snap.get("fat20") or [], 1)]
+    # Free-text project/task/ask/agent plans are not individually approved for publication.
+    # Keep only generic lanes, safe status/freshness and numeric schedule/progress fields.
+    fleet = snap.get("fleet") or {}
+    safe_lanes, lane_names = [], {}
+    group_names = {"dash": "Dash lane", "dot": "Dot lane", "grok": "Grok lane"}
+    for i, lane in enumerate(fleet.get("lanes") or [], 1):
+        key = str(lane.get("key") or "").lower()
+        safe_key = key if key in group_names else f"lane-{i:03d}"
+        lane_names[str(lane.get("lane") or "")] = group_names.get(key, f"Lane {i}")
+        safe_lanes.append({"key": safe_key, "lane": group_names.get(key, f"Lane {i}"),
+                           "board_agent": seat_label(lane.get("board_agent")),
+                           "focus": None, "current": None, "queue": None, "route": None, "thread": None,
+                           "thread_match": None})
+    safe_fleet_projects = []
+    for i, q in enumerate(fleet.get("projects") or [], 1):
+        lane = lane_names.get(str(q.get("lane") or ""), "Lane 1")
+        safe_fleet_projects.append({"id": f"W{i}", "lane": lane, "title": f"Work item {i}",
+                                    "goal": "Details withheld", "done_test": "Details withheld", "proof_type": None,
+                                    "subagents": [], "first_3_tasks": [], "eta_hours": _public_number(q.get("eta_hours"), 0),
+                                    "protected_steps": ["Protected step present"] if q.get("protected_steps") else [],
+                                    "status": _public_status(q.get("status")),
+                                    "hours_left": _public_number(q.get("hours_left"), 0),
+                                    "last_checkin": _public_time(q.get("last_checkin")), "latest_proof": None})
+    fleet_time = _public_time(fleet.get("updated"))
+    out_fleet = {"updated": fleet_time, "window": _public_time(fleet.get("window")),
+                 "window_end": _public_time(fleet.get("window_end")), "status_as_of": _public_time(fleet.get("status_as_of")),
+                 "hard_lines": [], "lanes": safe_lanes, "projects": safe_fleet_projects}
+    asks = snap.get("asks") or {}
+    out_asks = {"updated": _public_time(asks.get("updated")), "sources": None,
+                "asks": [{"n": int(_public_number(a.get("n"), 0) or i), "ask": f"Request {i}",
+                          "owner": "Unknown", "lane": f"Lane {i}",
+                          "status": _public_status(a.get("status")), "proof": None,
+                          "updated": _public_time(a.get("updated"))}
+                         for i, a in enumerate(asks.get("asks") or [], 1)],
+                "lanes": [{"lane": f"Lane {i}", "owner": "Unknown", "does": "Details withheld",
+                           "status": _public_status(l.get("status")), "report": "Status only"}
+                          for i, l in enumerate(asks.get("lanes") or [], 1)],
+                "needs_you": [{"what": f"Request {i}", "where": "Details withheld", "do": "Details withheld",
+                               "done_when": "Details withheld"}
+                              for i, _ in enumerate(asks.get("needs_you") or [], 1)]}
+    out_aiceo = [{"Type": str(r.get("Type")).upper() if str(r.get("Type") or "").upper() in {"PLAN", "AUDIT", "RUN"} else "OTHER",
+                  "Status": _public_status(r.get("Status")), "Seat": "Seat",
+                  "Graded by": None, "Date": _public_time(r.get("Date"))}
+                 for r in snap.get("aiceo") or []]
+    report_coverage = {"exhaustive": bool(coverage.get("exhaustive")),
+                       "receipt_cutoff": _public_time(coverage.get("receipt_cutoff")),
+                       "collapsed_repeats": int(_public_number(coverage.get("collapsed_repeats"), 0) or 0),
+                       "rows_scanned": int(_public_number(coverage.get("rows_scanned"), 0) or 0),
+                       "unique_rows": int(_public_number(coverage.get("unique_rows"), 0) or 0),
+                       "duplicate_row_ids": int(_public_number(coverage.get("duplicate_row_ids"), 0) or 0),
+                       "unlinked_rows": int(_public_number(coverage.get("unlinked_rows"), 0) or 0),
+                       "unknown_agent_links": int(_public_number(coverage.get("unknown_agent_links"), 0) or 0),
+                       "unknown_device_links": int(_public_number(coverage.get("unknown_device_links"), 0) or 0),
+                       "unknown_project_links": int(_public_number(coverage.get("unknown_project_links"), 0) or 0),
+                       "per_agent": per_agent}
+    aiceo_cov = snap.get("aiceo_coverage") or {}
+    return {"agents": out_agents, "devices": out_devices, "projects": out_projects, "checkins": out_checkins,
+            "tasks": out_tasks, "primary_agents": [agent_ids.get(str(i), f"primary-{n:03d}") for n, i in enumerate(snap.get("primary_agents") or [], 1)],
+            "report_coverage": report_coverage, "project_checkins": project_checkins, "tracked_work": out_tracked,
+            "counts": counts, "fleet": out_fleet, "asks": out_asks, "coceo": out_coceo, "caio": out_caio, "crons": out_crons,
+            "fat20": out_fat20, "aiceo": out_aiceo,
+            "aiceo_coverage": {"state": aiceo_cov.get("state") if aiceo_cov.get("state") in {"available", "empty", "unavailable"} else "unavailable",
+                               "exhaustive": bool(aiceo_cov.get("exhaustive")),
+                               "public_rows": int(_public_number(aiceo_cov.get("public_rows"), 0) or 0) if aiceo_cov.get("public_rows") is not None else None},
+            "aiceo_status": "Source coverage available; row details are withheld." if aiceo_cov.get("state") != "unavailable" else "Source coverage unavailable; private diagnostics are withheld."}
+
 def render(snap, at):
-    data = json.dumps(snap, ensure_ascii=False).replace("</", "<\\/")
+    safe = public_projection(snap)
+    data = json.dumps(safe, ensure_ascii=False).replace("</", "<\\/")
     return (Path("template.html").read_text().replace("__REPORT_STATUS__", Path("report_status.js").read_text() + "\n" + (Path("big.js").read_text() if Path("big.js").is_file() else ""))
             .replace("__AT__", at).replace("__SNAP__", data))
 
