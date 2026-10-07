@@ -14,8 +14,8 @@ class PublicPrivacyTests(unittest.TestCase):
         now = "2026-10-07T23:00:00Z"
         owned_source = build.owned_work_projection(
             [{"url": build.OWNED_WORK_PROJECT, "Progress %": 40, "Status": "IN PROGRESS", "_edited": now}],
-            [{"url": build.OWNED_WORK_CHECKIN, "Agent": [build.OWNED_WORK_AGENT],
-              "Project": [build.OWNED_WORK_PROJECT], "Logged": now, "Status": "PICKED UP"}],
+            [{"url": "private-report-id", "Agent": [build.OWNED_WORK_AGENT],
+              "Project": [build.OWNED_WORK_PROJECT], "Logged": now, "Progress %": 40, "Status": "PICKED UP"}],
             now=datetime.fromisoformat(now.replace("Z", "+00:00")))
         raw = {
             "agents": [{"url": aid, "Agent": "LEAK_AGENT_NAME", "Status": "ACTIVE", "Platform": "LEAK_DEVICE",
@@ -78,7 +78,7 @@ class PublicPrivacyTests(unittest.TestCase):
                        "LEAK_DOES", "LEAK_NEEDS_YOU", "LEAK_COCEO_NOTE", "LEAK_CAIO_COVERS", "LEAK_CRON",
                        "LEAK_DEFINED_IN", "LEAK_FAT20_ITEM", "LEAK_AICEO_TITLE", "LEAK_PRIVATE_DIAGNOSTIC",
                        "LEAK_UNKNOWN_FIELD", "LEAK_TOP_LEVEL", aid, pid, did, rid, "LEAK_PRIVATE_SOURCE_ID",
-                       build.OWNED_WORK_AGENT, build.OWNED_WORK_PROJECT, build.OWNED_WORK_CHECKIN):
+                       build.OWNED_WORK_AGENT, build.OWNED_WORK_PROJECT):
             self.assertNotIn(marker, html, marker)
         self.assertIn('"progress": 40', html)
         self.assertIn('"freshness": "FRESH"', html)
@@ -98,8 +98,8 @@ class PublicPrivacyTests(unittest.TestCase):
         edited = (at - timedelta(hours=30)).isoformat().replace("+00:00", "Z")
         sourced = build.owned_work_projection(
             [{"url": build.OWNED_WORK_PROJECT, "Progress %": 25, "Status": "IN PROGRESS", "_edited": edited}],
-            [{"url": build.OWNED_WORK_CHECKIN, "Agent": [build.OWNED_WORK_AGENT],
-              "Project": [build.OWNED_WORK_PROJECT], "Logged": edited, "Status": "PICKED UP"}],
+            [{"url": "private-stale-report-id", "Agent": [build.OWNED_WORK_AGENT],
+              "Project": [build.OWNED_WORK_PROJECT], "Logged": edited, "Progress %": 25, "Status": "PICKED UP"}],
             now=at)
         safe = build.public_projection({"tracked_work": sourced})["tracked_work"]
         self.assertEqual(safe["progress"], 25)

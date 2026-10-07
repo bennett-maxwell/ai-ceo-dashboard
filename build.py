@@ -31,7 +31,7 @@ PUBLIC_FIELDS = {
     "agents": ("Agent", "Status", "Platform", "Role", "Device", "Projects"),
     "devices": ("Device", "Type"),
     "projects": ("Project", "Company", "Status", "Progress %", "Last %", "Finish condition", "Agents", "Category", "Priority", "Big project"),
-    "checkins": ("Agent", "Logged", "Time", "Status", "Doing now", "Project", "Proof", "Device", "Blocker question"),
+    "checkins": ("Agent", "Logged", "Time", "Status", "Progress %", "Doing now", "Project", "Proof", "Device", "Blocker question"),
     "crons": ("Routine", "State", "Cadence", "Runs on", "Defined in"),
     "caio": ("Division", "Status", "Covers", "Projects", "Order"),
     "fat20": ("Rank", "Item", "Status", "Progress %"),
@@ -116,28 +116,62 @@ PRIMARY_AGENT_IDS = (
 # Exact owned work tuple used for server-side joins only. IDs are never emitted.
 OWNED_WORK_AGENT = "3f2cf5514fd38173bfecc443d79590d0"
 OWNED_WORK_PROJECT = "3f2cf5514fd381eebbb8f8937d504b2b"
-OWNED_WORK_CHECKIN = "3f2cf5514fd38115ae70ff9bc236df66"
-
-def owned_work_projection(projects, reports, now=None, max_age_hours=24):
-    """Privacy-safe source-bound progress; absent, mismatched, or invalid is UNKNOWN."""
+def owned_work_projection(projects, reports, now=None, max_age_minutes=5):
+    """Separate current exact-related report facts from project-recorded facts."""
     now = now or datetime.datetime.now(datetime.timezone.utc)
-    p = next((x for x in projects if x.get("url") == OWNED_WORK_PROJECT), None)
-    linked = [r for r in reports if r.get("url") == OWNED_WORK_CHECKIN
-              and OWNED_WORK_AGENT in (r.get("Agent") or [])
-              and OWNED_WORK_PROJECT in (r.get("Project") or [])]
-    latest = max(linked, key=lambda r: timestamp(r.get("Logged")) or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc), default=None)
-    value = p.get("Progress %") if p else None
-    valid = isinstance(value, (int, float)) and not isinstance(value, bool) and 0 <= value <= 100
+    p = next((x for x in projects if norm_id(x.get("url")) == OWNED_WORK_PROJECT), None)
+    candidates, uncertain = [], False
+    for r in reports:
+        agent_links = [norm_id(x) for x in (r.get("Agent") or [])]
+        project_links = [norm_id(x) for x in (r.get("Project") or [])]
+        possible = OWNED_WORK_AGENT in agent_links and OWNED_WORK_PROJECT in project_links
+        if OWNED_WORK_PROJECT in project_links and r.get("_agent_relation_complete") is False:
+            uncertain = True
+        if possible:
+            logged = timestamp(r.get("Logged"))
+            if logged is None:
+                uncertain = True
+            else:
+                candidates.append((logged, r))
+    latest = None
+    ambiguous = False
+    future = False
+    if candidates:
+        newest_time = max(t for t, _ in candidates)
+        newest = [r for t, r in candidates if t == newest_time]
+        future = newest_time > now
+        signatures = {(r.get("Progress %"), _public_status(r.get("Status"))) for r in newest}
+        ambiguous = len(signatures) > 1
+        if not future and not ambiguous:
+            latest = newest[0]
+    project_value = p.get("Progress %") if p else None
+    project_value = _public_number(project_value, 0, 100)
     edited = p.get("_edited") if p else None
-    observed = timestamp(edited)
-    freshness = "UNKNOWN" if observed is None else ("STALE" if (now-observed).total_seconds() > max_age_hours*3600 else "FRESH")
-    return {"label":"CEO clock-in repair", "scope":"source-linked progress; not runtime or public deployment completion",
-            "progress":value if valid else None, "progress_state":"SOURCED" if valid else "UNKNOWN",
-            "status":p.get("Status") if p else None, "status_state":"SOURCED" if p and p.get("Status") else "UNKNOWN",
-            "as_of":edited, "freshness":freshness,
-            "checkin_status":latest.get("Status") if latest else None,
-            "checkin_logged":latest.get("Logged") if latest else None,
-            "checkin_state":"MATCHED" if latest else "UNKNOWN"}
+    edited_time = timestamp(edited)
+    project_status = _public_status(p.get("Status")) if p and p.get("Status") else "UNKNOWN"
+    current_value = _public_number(latest.get("Progress %"), 0, 100) if latest else None
+    report_time = timestamp(latest.get("Logged")) if latest else None
+    report_freshness = ("UNKNOWN" if latest is None or uncertain else
+                        "STALE" if (now-report_time).total_seconds() > max_age_minutes*60 else "FRESH")
+    if report_freshness == "UNKNOWN":
+        current_value = None
+    current_state = "SOURCED" if current_value is not None and report_freshness != "UNKNOWN" else "UNKNOWN"
+    if ambiguous:
+        current_state = "AMBIGUOUS"
+    project_freshness = ("UNKNOWN" if edited_time is None else
+                         "STALE" if edited_time > now or (now-edited_time).total_seconds() > 24*3600 else "FRESH")
+    return {"label":"CEO clock-in repair", "scope":"Current report and project-recorded progress are separate source values; neither implies runtime or deployment completion.",
+            "progress":current_value, "progress_state":current_state,
+            "status":_public_status(latest.get("Status")) if latest and report_freshness != "UNKNOWN" else "UNKNOWN",
+            "as_of":latest.get("Logged") if latest and report_freshness != "UNKNOWN" else None,
+            "freshness":report_freshness,
+            "checkin_status":_public_status(latest.get("Status")) if latest and report_freshness != "UNKNOWN" else "UNKNOWN",
+            "checkin_logged":latest.get("Logged") if latest and report_freshness != "UNKNOWN" else None,
+            "checkin_state":"AMBIGUOUS" if ambiguous else "MATCHED" if latest and report_freshness != "UNKNOWN" else "UNKNOWN",
+            "project_progress":project_value, "project_progress_state":"SOURCED" if project_value is not None else "UNKNOWN",
+            "project_status":project_status, "project_as_of":edited if p else None,
+            "project_freshness":project_freshness,
+            "mismatch":bool(current_value is not None and project_value is not None and current_value != project_value)}
 
 def project_checkins(reports, cutoff=None):
     """Newest linked check-in per project over the complete check-in scan (not the capped feed)."""
@@ -474,7 +508,7 @@ PUBLIC_STATUSES = {
     "ACTIVE", "WORKING", "ON TRACK", "PAUSED", "STUCK", "ON HOLD", "NEW", "NEEDS YOU", "NEEDS INPUT", "UNPROVED",
     "NOT STARTED", "CANCELLED", "ARCHIVED", "PARKED", "RETIRED", "INACTIVE", "OPEN",
     "CLOSED", "OK", "ERROR", "FAILED", "UNKNOWN", "NO STATUS", "REPORTED", "ALIVE",
-    "NOT TESTED", "NOTHING", "OFFLINE", "CLOCK-OUT",
+    "NOT TESTED", "NOTHING", "OFFLINE", "CLOCK-OUT", "MOVING",
 }
 
 def _public_status(value):
@@ -485,6 +519,7 @@ def _public_status(value):
     exact = {s: s for s in PUBLIC_STATUSES}
     exact.update({"🟢 ALIVE": "ALIVE", "🟢ALIVE": "ALIVE", "🟡 WORKING": "WORKING", "🟡WORKING": "WORKING",
                   "⚪ NOT TESTED": "NOT TESTED", "⚪NOT TESTED": "NOT TESTED", "⛔ RETIRED": "RETIRED", "⛔RETIRED": "RETIRED",
+                  "🟡 MOVING": "MOVING", "🟡MOVING": "MOVING",
                   "NOTHING": "NOTHING", "OFFLINE": "OFFLINE", "CLOCK-OUT": "CLOCK-OUT",
                   "CLOCK OUT": "CLOCK-OUT"})
     return exact.get(key, "UNKNOWN")
@@ -599,14 +634,21 @@ def public_projection(snap):
                                      "rows": _public_number(v.get("rows"), 0)}
     tracked = snap.get("tracked_work") or {}
     tracked_progress = _public_number(tracked.get("progress"), 0, 100)
-    out_tracked = {"label": "CEO clock-in repair", "scope": "Source-linked progress; not runtime or public deployment completion",
-                   "progress": tracked_progress, "progress_state": "SOURCED" if tracked_progress is not None and tracked.get("progress_state") == "SOURCED" else "UNKNOWN",
-                   "status": _public_status(tracked.get("status")) if tracked.get("status_state") == "SOURCED" else "UNKNOWN",
+    project_progress = _public_number(tracked.get("project_progress"), 0, 100)
+    out_tracked = {"label": "CEO clock-in repair", "scope": "Current report and project-recorded progress are separate source values; neither implies runtime or public deployment completion.",
+                   "progress": tracked_progress, "progress_state": tracked.get("progress_state") if tracked.get("progress_state") in {"SOURCED", "UNKNOWN", "AMBIGUOUS"} and (tracked_progress is not None or tracked.get("progress_state") == "AMBIGUOUS") else "UNKNOWN",
+                   "status": _public_status(tracked.get("status")),
                    "as_of": _public_time(tracked.get("as_of")),
                    "freshness": tracked.get("freshness") if tracked.get("freshness") in {"FRESH", "STALE", "UNKNOWN"} else "UNKNOWN",
                    "checkin_status": _public_status(tracked.get("checkin_status")),
                    "checkin_logged": _public_time(tracked.get("checkin_logged")),
-                   "checkin_state": tracked.get("checkin_state") if tracked.get("checkin_state") in {"MATCHED", "UNKNOWN"} else "UNKNOWN"}
+                   "checkin_state": tracked.get("checkin_state") if tracked.get("checkin_state") in {"MATCHED", "UNKNOWN", "AMBIGUOUS"} else "UNKNOWN",
+                   "project_progress": project_progress,
+                   "project_progress_state": "SOURCED" if project_progress is not None and tracked.get("project_progress_state") == "SOURCED" else "UNKNOWN",
+                   "project_status": _public_status(tracked.get("project_status")),
+                   "project_as_of": _public_time(tracked.get("project_as_of")),
+                   "project_freshness": tracked.get("project_freshness") if tracked.get("project_freshness") in {"FRESH", "STALE", "UNKNOWN"} else "UNKNOWN",
+                   "mismatch": bool(tracked.get("mismatch"))}
     out_tasks = [{"Focus": "__YES__" if t.get("Focus") == "__YES__" else "__NO__",
                   "Name": f"Open task {i}", "Owner": _seat_label(t.get("Owner")),
                   "Status": _public_status(t.get("Status")), "Progress %": _public_number(t.get("Progress %"), 0, 100)}
