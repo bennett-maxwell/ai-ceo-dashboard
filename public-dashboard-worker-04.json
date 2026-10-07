@@ -1,0 +1,38 @@
+{
+  "receipt_version": "public-dashboard-worker-04",
+  "status": "CANDIDATE",
+  "repository": "bennett-maxwell/ai-ceo-dashboard",
+  "pull_request": 3,
+  "branch": "codex/d2-owned-progress-02",
+  "exact_head_before": "cf97eaf88c8acd240df50c11de9f9cb75b16a243",
+  "exact_pr_head_before": "cf97eaf88c8acd240df50c11de9f9cb75b16a243",
+  "base_branch": "main",
+  "exact_base_sha": "3b64997a1764e7b7ce182f2b24bb8ccd2fdf133d",
+  "worktree": "/tmp/ai-ceo-dashboard-d2-worker",
+  "changes": [
+    "Replace source-order seat numbering with code-owned, stable aliases and explicitly approved operational labels for known Notion agent IDs.",
+    "Unknown agent IDs receive a stable opaque hashed alias and generic Unknown seat label; arbitrary source names are never published and unknown rows remain in aggregate/per-agent coverage.",
+    "Use explicit reviewed status normalization for ALIVE, WORKING, NOT TESTED, RETIRED and clock states; arbitrary emoji/free text fails closed to UNKNOWN.",
+    "Make project/device aliases deterministic from normalized IDs and update HTML detail routing for opaque stable aliases."
+  ],
+  "regression_and_privacy_coverage": [
+    "Whole rendered HTML synthetic negative fixture covers arbitrary lead/contact, email, phone, device, private project/task title, blocker, Doing text, proof URL, relation IDs, unexpected properties and unknown top-level data; markers and raw IDs asserted absent.",
+    "Exact source relation preserves owned 40% progress; stale exact relation preserves 25% while marking STALE; missing/invalid progress remains UNKNOWN.",
+    "Reordered known and unknown agent source records preserve stable aliases, labels and coverage mappings; unknown arbitrary source names are absent and the record remains counted.",
+    "Exact status fixtures cover ALIVE, 🟢Alive, 🟡Working, ⚪Not tested, ⛔Retired, NOTHING, OFFLINE and CLOCK-OUT; arbitrary status text/emoji becomes UNKNOWN."
+  ],
+  "verification": {
+    "python": "python3 -m unittest discover -s tests — exit 0, 61 tests",
+    "node": "for f in tests/*.cjs; do node $f; done — exit 0, 68 tests",
+    "python_compile": "python3 -m py_compile build.py — exit 0",
+    "diff_check": "git diff --check — exit 0",
+    "prior_review": "public-privacy-review-02 rejected previous cf97eaf candidate for functional regression; this receipt addresses identified identity/status issues; independent re-review pending",
+    "ci": "Not checked; no CI claim",
+    "live_source": "No live Notion-token snapshot/build run"
+  },
+  "gaps": [
+    "Independent privacy/functionality re-review is pending.",
+    "Synthetic fixtures do not prove current live Notion source quality or a production build.",
+    "No merge, deploy, main-branch write, or workflow change was performed."
+  ]
+}

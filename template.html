@@ -44,7 +44,7 @@ const TABS=[["grok","Grok"],["dash","Dash"],["dot","Dot"],["asks","Your asks"],[
 const COMPANIES=["All companies","Franchise KI","Advaita AI","Grokbot","Personal"];
 const S={data:{},tab:"asks",co:"All companies"};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const pid=u=>{const s=String(u||"");const pub=s.match(/^(?:agent|project|device)-[0-9]{3,}$/i);if(pub)return pub[0].toLowerCase();const m=s.replace(/-/g,"").match(/^[0-9a-f]{32}$/i);return m?m[0].toLowerCase():""};
+const pid=u=>{const s=String(u||"");const pub=s.match(/^(?:agent|project|device)-[a-z0-9-]{12,}$/i);if(pub)return pub[0].toLowerCase();const m=s.replace(/-/g,"").match(/^[0-9a-f]{32}$/i);return m?m[0].toLowerCase():""};
 const rel=v=>{if(!v)return[];try{const a=typeof v==="string"?JSON.parse(v):v;return(Array.isArray(a)?a:[a]).map(pid).filter(Boolean)}catch{return[]}};
 const ago=t=>{if(!t)return"unknown";const parsed=ReportStatus.time(t);if(parsed==null||parsed>Date.now())return"invalid/future timestamp";const m=Math.floor((Date.now()-parsed)/60000);return m<1?"just now":m<60?m+"m ago":m<1440?Math.floor(m/60)+"h ago":Math.floor(m/1440)+"d ago"};
 const byId=l=>{const m={};(l||[]).forEach(r=>m[pid(r.url)]=r);return m};
@@ -55,7 +55,7 @@ function tabsUI(){tabs.innerHTML=TABS.map(([k,l])=>`<a href="#${k}" data-k="${k}
 tabs.addEventListener("click",e=>{const a=e.target.closest("a");if(!a)return;e.preventDefault();S.tab=a.dataset.k;S.fl=null;history.replaceState(null,"","#"+S.tab);render()});
 companies.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S.co=b.dataset.co;render()});
 const savedCompany=new URL(location.href).searchParams.get("company");if(COMPANIES.includes(savedCompany))S.co=savedCompany;
-function route(){const h=location.hash.slice(1),m=h.match(/^(agent|project)=((?:agent|project)-[0-9]{3,}|[0-9a-f]{32})$/i),f=h.match(/^fleet=([a-z0-9-]+)(?:\/([A-Za-z0-9]+))?$/);if(f){S.tab="fleet";S.fl=[f[1],f[2]];S.det=null}else if(h==="fleet"){S.tab="fleet";S.fl=null;S.det=null}else if(m){S.tab="detail";S.det=[m[1].toLowerCase(),m[2].toLowerCase()]}else if(TABS.some(t=>t[0]===h)){S.tab=h;S.det=null}}route();
+function route(){const h=location.hash.slice(1),m=h.match(/^(agent|project)=((?:agent|project)-[a-z0-9-]{12,}|[0-9a-f]{32})$/i),f=h.match(/^fleet=([a-z0-9-]+)(?:\/([A-Za-z0-9]+))?$/);if(f){S.tab="fleet";S.fl=[f[1],f[2]];S.det=null}else if(h==="fleet"){S.tab="fleet";S.fl=null;S.det=null}else if(m){S.tab="detail";S.det=[m[1].toLowerCase(),m[2].toLowerCase()]}else if(TABS.some(t=>t[0]===h)){S.tab=h;S.det=null}}route();
 if(typeof addEventListener==="function")addEventListener("hashchange",()=>{route();render();if(typeof scrollTo==="function")scrollTo(0,0)});
 function live(id){return ReportStatus.evaluate(S.data.report_coverage?.per_agent?.[id],SNAP_AT)}
 function reportMeta(L){

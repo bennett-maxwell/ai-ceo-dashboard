@@ -473,17 +473,45 @@ PUBLIC_STATUSES = {
     "FINISHED", "IN PROGRESS", "STARTED", "READY", "PENDING", "WAITING", "PLANNED",
     "ACTIVE", "WORKING", "ON TRACK", "PAUSED", "STUCK", "ON HOLD", "NEW", "NEEDS YOU", "NEEDS INPUT", "UNPROVED",
     "NOT STARTED", "CANCELLED", "ARCHIVED", "PARKED", "RETIRED", "INACTIVE", "OPEN",
-    "CLOSED", "OK", "ERROR", "FAILED", "UNKNOWN", "NO STATUS", "REPORTED",
+    "CLOSED", "OK", "ERROR", "FAILED", "UNKNOWN", "NO STATUS", "REPORTED", "ALIVE",
+    "NOT TESTED", "NOTHING", "OFFLINE", "CLOCK-OUT",
 }
 
 def _public_status(value):
-    """Status is data too: only publish a small fixed operational vocabulary."""
+    """Map exact, reviewed operational values; never normalize arbitrary emoji/free text."""
     if not isinstance(value, str):
         return "UNKNOWN"
-    key = " ".join(value.strip().upper().replace("_", " ").replace("-", " ").split())
-    if key.startswith("PICKED") and key.replace(" ", "") in {"PICKEDUP", "PICKED"}:
-        key = "PICKED UP"
-    return key if key in PUBLIC_STATUSES else "UNKNOWN"
+    key = " ".join(value.strip().upper().split())
+    exact = {s: s for s in PUBLIC_STATUSES}
+    exact.update({"🟢 ALIVE": "ALIVE", "🟢ALIVE": "ALIVE", "🟡 WORKING": "WORKING", "🟡WORKING": "WORKING",
+                  "⚪ NOT TESTED": "NOT TESTED", "⚪NOT TESTED": "NOT TESTED", "⛔ RETIRED": "RETIRED", "⛔RETIRED": "RETIRED",
+                  "NOTHING": "NOTHING", "OFFLINE": "OFFLINE", "CLOCK-OUT": "CLOCK-OUT",
+                  "CLOCK OUT": "CLOCK-OUT"})
+    return exact.get(key, "UNKNOWN")
+
+# Explicit code-owned seat registry. Names and aliases are never derived from arbitrary Notion text.
+PUBLIC_SEAT_REGISTRY = {
+    "3f2cf5514fd38173bfecc443d79590d0": ("agent-be434c7128d6", "ChadCodexMacBook", ("Chad", "Chad (Codex, MacBook)")),
+    "3f1cf5514fd381f0a4c9cd7365e678c5": ("agent-dccd31c7f1d5", "GemmaTiffany", ("Gemma", "Gemma (Tiffany)")),
+    "3edcf5514fd38131bd00e1080bf6d826": ("agent-0c2ff5563abd", "GrantGrokMacBook", ("Grok MB (Grant)",)),
+    "3edcf5514fd381ecb7a7f9c2f8411b1d": ("agent-7efe68c9217a", "BrockGrokiMac", ("Grok IM (Brock)",)),
+    "3edcf5514fd381d7a91dd8a7bdcccb87": ("agent-62eae1732e58", "MackClaudeMacBook", ("Claude MB CLI",)),
+    "3edcf5514fd3812ea137d3ce41dafab3": ("agent-fdf92af87157", "Dash", ("Dash",)),
+    "3edcf5514fd3815aa780ca4aff45c771": ("agent-2ea55c7dfbf0", "Hank", ("Hank",)),
+    "3edcf5514fd381c18e9ad31f16369f38": ("agent-9e2c65b86258", "Dot", ("Dot",)),
+}
+_PUBLIC_SEAT_NAMES = {name.casefold(): alias for _, (alias, _, names) in PUBLIC_SEAT_REGISTRY.items() for name in names}
+
+def _stable_alias(kind, source_id):
+    import hashlib
+    normalized = norm_id(str(source_id or ""))
+    if kind == "agent" and normalized in PUBLIC_SEAT_REGISTRY:
+        return PUBLIC_SEAT_REGISTRY[normalized][0]
+    digest = hashlib.sha256(normalized.encode()).hexdigest()[:12] if normalized else "unknown000000"
+    return f"{kind}-unknown-{digest}" if kind == "agent" else f"{kind}-{digest}"
+
+def _seat_label(name):
+    return _PUBLIC_SEAT_NAMES.get(str(name or "").casefold(), "Unknown seat")
 
 def _public_time(value):
     parsed = timestamp(value)
@@ -506,38 +534,32 @@ def public_projection(snap):
     agents = snap.get("agents") or []
     projects = snap.get("projects") or []
     devices = snap.get("devices") or []
-    agent_ids = {str(a.get("url")): f"agent-{i:03d}" for i, a in enumerate(agents, 1) if a.get("url")}
-    project_ids = {str(p.get("url")): f"project-{i:03d}" for i, p in enumerate(projects, 1) if p.get("url")}
-    device_ids = {str(d.get("url")): f"device-{i:03d}" for i, d in enumerate(devices, 1) if d.get("url")}
-    agent_names = {str(a.get("Agent") or "").casefold(): key for a in agents
-                   if (key := agent_ids.get(str(a.get("url"))))}
-
-    def seat_label(name):
-        alias = agent_names.get(str(name or "").casefold())
-        return f"Seat {alias.split('-')[-1].lstrip('0') or '0'}" if alias else "Unknown"
+    agent_ids = {str(a.get("url")): _stable_alias("agent", a.get("url")) for a in agents if a.get("url")}
+    project_ids = {str(p.get("url")): _stable_alias("project", p.get("url")) for p in projects if p.get("url")}
+    device_ids = {str(d.get("url")): _stable_alias("device", d.get("url")) for d in devices if d.get("url")}
 
     def refs(values, mapping):
         return [mapping[str(v)] for v in values or [] if str(v) in mapping]
-    out_agents = [{"url": agent_ids[str(a.get("url"))], "Agent": f"Seat {i}",
+    out_agents = [{"url": agent_ids[str(a.get("url"))], "Agent": PUBLIC_SEAT_REGISTRY.get(norm_id(str(a.get("url"))), (None, "Unknown seat"))[1],
                    "Status": _public_status(a.get("Status")), "Projects": refs(a.get("Projects"), project_ids),
                    "Device": refs([a.get("Device")] if a.get("Device") else [], device_ids)}
-                  for i, a in enumerate(agents, 1) if str(a.get("url")) in agent_ids]
-    out_projects = [{"url": project_ids[str(p.get("url"))], "Project": f"Project {i}",
+                  for a in agents if str(a.get("url")) in agent_ids]
+    out_projects = [{"url": project_ids[str(p.get("url"))], "Project": f"Project {project_ids[str(p.get('url'))].split('-')[-1]}",
                      "Company": "Other", "Status": _public_status(p.get("Status")),
                      "Progress %": _public_number(p.get("Progress %"), 0, 100),
                      "Last %": _public_number(p.get("Last %"), 0, 100),
                      "Agents": refs(p.get("Agents"), agent_ids),
                      "_edited": _public_time(p.get("_edited"))}
-                    for i, p in enumerate(projects, 1) if str(p.get("url")) in project_ids]
-    out_devices = [{"url": device_ids[str(d.get("url"))], "Device": f"Device {i}", "Type": "Device"}
-                   for i, d in enumerate(devices, 1) if str(d.get("url")) in device_ids]
+                  for p in projects if str(p.get("url")) in project_ids]
+    out_devices = [{"url": device_ids[str(d.get("url"))], "Device": "Device", "Type": "Device"}
+                   for d in devices if str(d.get("url")) in device_ids]
     coverage = snap.get("report_coverage") or {}
     per_agent = {}
     for raw_id, c in (coverage.get("per_agent") or {}).items():
         alias = agent_ids.get(str(raw_id))
         if alias is None:
             # Preserve primary-seat coverage when a primary registration row is absent.
-            alias = f"primary-{len(per_agent)+1:03d}"
+            alias = _stable_alias("agent", raw_id)
         latest = c.get("latest") or {}
         latest_agent_refs = refs(latest.get("Agent"), agent_ids)
         latest_public = ({"Status": _public_status(latest.get("Status")), "Logged": _public_time(latest.get("Logged")),
@@ -586,9 +608,9 @@ def public_projection(snap):
                    "checkin_logged": _public_time(tracked.get("checkin_logged")),
                    "checkin_state": tracked.get("checkin_state") if tracked.get("checkin_state") in {"MATCHED", "UNKNOWN"} else "UNKNOWN"}
     out_tasks = [{"Focus": "__YES__" if t.get("Focus") == "__YES__" else "__NO__",
-                  "Name": f"Open task {i}", "Owner": seat_label(t.get("Owner")),
+                  "Name": f"Open task {i}", "Owner": _seat_label(t.get("Owner")),
                   "Status": _public_status(t.get("Status")), "Progress %": _public_number(t.get("Progress %"), 0, 100)}
-                 for i, t in enumerate(snap.get("tasks") or [], 1)]
+                  for i, t in enumerate(snap.get("tasks") or [], 1)]
     out_coceo = [{"Logged": _public_time(x.get("Logged")),
                   "Author": refs(x.get("Author"), agent_ids), "Entry": f"Entry {i}",
                   "Type": _public_status(x.get("Type")), "Strategy note": "Details withheld",
@@ -617,7 +639,7 @@ def public_projection(snap):
         safe_key = key if key in group_names else f"lane-{i:03d}"
         lane_names[str(lane.get("lane") or "")] = group_names.get(key, f"Lane {i}")
         safe_lanes.append({"key": safe_key, "lane": group_names.get(key, f"Lane {i}"),
-                           "board_agent": seat_label(lane.get("board_agent")),
+                           "board_agent": _seat_label(lane.get("board_agent")),
                            "focus": None, "current": None, "queue": None, "route": None, "thread": None,
                            "thread_match": None})
     safe_fleet_projects = []
@@ -664,7 +686,7 @@ def public_projection(snap):
                        "per_agent": per_agent}
     aiceo_cov = snap.get("aiceo_coverage") or {}
     return {"agents": out_agents, "devices": out_devices, "projects": out_projects, "checkins": out_checkins,
-            "tasks": out_tasks, "primary_agents": [agent_ids.get(str(i), f"primary-{n:03d}") for n, i in enumerate(snap.get("primary_agents") or [], 1)],
+            "tasks": out_tasks, "primary_agents": [agent_ids.get(str(i), _stable_alias("agent", i)) for i in (snap.get("primary_agents") or [])],
             "report_coverage": report_coverage, "project_checkins": project_checkins, "tracked_work": out_tracked,
             "counts": counts, "fleet": out_fleet, "asks": out_asks, "coceo": out_coceo, "caio": out_caio, "crons": out_crons,
             "fat20": out_fat20, "aiceo": out_aiceo,

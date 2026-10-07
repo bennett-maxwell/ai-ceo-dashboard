@@ -82,8 +82,8 @@ class PublicPrivacyTests(unittest.TestCase):
             self.assertNotIn(marker, html, marker)
         self.assertIn('"progress": 40', html)
         self.assertIn('"freshness": "FRESH"', html)
-        self.assertIn("Seat 1", html)
-        self.assertIn("project-001", html)
+        self.assertIn("Unknown seat", html)
+        self.assertIn("project-", html)
         self.assertIsNone(re.search(r"[0-9a-f]{32}", html, re.I))
 
     def test_missing_or_invalid_owned_progress_is_unknown_not_inferred(self):
@@ -105,6 +105,50 @@ class PublicPrivacyTests(unittest.TestCase):
         self.assertEqual(safe["progress"], 25)
         self.assertEqual(safe["progress_state"], "SOURCED")
         self.assertEqual(safe["freshness"], "STALE")
+
+    def test_identity_aliases_and_coverage_are_stable_under_source_reordering(self):
+        known = "3f2cf5514fd38173bfecc443d79590d0"
+        other = "3edcf5514fd38131bd00e1080bf6d826"
+        unknown = "f" * 32
+        agents = [{"url": known, "Agent": "Chad", "Status": "🟡Working"},
+                  {"url": other, "Agent": "Grok MB (Grant)", "Status": "🟢Alive"},
+                  {"url": unknown, "Agent": "PRIVATE ARBITRARY LEAD NAME", "Status": "⚪ Not tested"}]
+        coverage = {aid: {"included": True, "matching_rows": 2, "latest": {"Agent": [aid], "Status": "ALIVE"}}
+                    for aid in (known, other, unknown)}
+        one = build.public_projection({"agents": agents, "report_coverage": {"per_agent": coverage}})
+        two = build.public_projection({"agents": list(reversed(agents)), "report_coverage": {"per_agent": dict(reversed(list(coverage.items())))}})
+        by_name = lambda data: {row["Agent"]: row["url"] for row in data["agents"]}
+        self.assertEqual(by_name(one), by_name(two))
+        self.assertEqual(one["report_coverage"]["per_agent"], two["report_coverage"]["per_agent"])
+        self.assertEqual(by_name(one)["ChadCodexMacBook"], "agent-be434c7128d6")
+        self.assertEqual(by_name(one)["GrantGrokMacBook"], "agent-0c2ff5563abd")
+        self.assertEqual(by_name(one)["Unknown seat"], "agent-unknown-" + __import__("hashlib").sha256(unknown.encode()).hexdigest()[:12])
+        serialized = __import__("json").dumps(one)
+        self.assertNotIn("PRIVATE ARBITRARY LEAD NAME", serialized)
+        self.assertNotIn(unknown, serialized)
+        self.assertEqual({r["Status"] for r in one["agents"]}, {"WORKING", "ALIVE", "NOT TESTED"})
+
+    def test_exact_public_statuses_and_unknown_free_text(self):
+        cases = {"ALIVE": "ALIVE", "🟢Alive": "ALIVE", "🟡 Working": "WORKING",
+                 "⚪Not tested": "NOT TESTED", "⛔ Retired": "RETIRED", "NOTHING": "NOTHING",
+                 "OFFLINE": "OFFLINE", "CLOCK-OUT": "CLOCK-OUT",
+                 "🟡 Working on private account 555-1212": "UNKNOWN", "🔴LEAD NAME": "UNKNOWN"}
+        for value, expected in cases.items():
+            with self.subTest(value=value):
+                self.assertEqual(build._public_status(value), expected)
+
+    def test_unknown_source_name_never_becomes_public_and_unknown_is_counted(self):
+        unknown = "e" * 32
+        raw = {"agents": [{"url": unknown, "Agent": "PRIVATE CONTACT Jane Doe jane@example.invalid", "Status": "🟡Working"}],
+               "counts": {"agents": 1}, "report_coverage": {"per_agent": {unknown: {"included": True, "matching_rows": 7}}}}
+        rendered = build.render(raw, "2026-10-07T23:00:00Z")
+        self.assertIn('"agents": 1', rendered)
+        self.assertIn('"matching_rows": 7', rendered)
+        self.assertIn("Unknown seat", rendered)
+        self.assertNotIn("PRIVATE CONTACT", rendered)
+        self.assertNotIn("Jane Doe", rendered)
+        self.assertNotIn("jane@example.invalid", rendered)
+        self.assertNotIn(unknown, rendered)
 
 
 if __name__ == "__main__":
