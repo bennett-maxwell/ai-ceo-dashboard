@@ -1,0 +1,38 @@
+{
+  "receipt_version": "public-dashboard-worker-09",
+  "status": "CANDIDATE_REVIEW_PENDING",
+  "repository": "bennett-maxwell/ai-ceo-dashboard",
+  "pull_request": "https://github.com/bennett-maxwell/ai-ceo-dashboard/pull/4",
+  "branch": "codex/d2-r5-visible-progress",
+  "base_commit": "1152f51e901c1efa6855d4ee3dcfb08970680cae",
+  "exact_implementation_commit": "ef73afd1f9ff7f8bc91525fb9542d214402c03ea",
+  "changes": [
+    "Compute project-recorded progress freshness from validated project_as_of against Date.now on each existing render, independent of current-report freshness.",
+    "Preserve project-source value, status, and edited timestamp separately from current-report fields and mismatch indicators.",
+    "Valid project progress older than five minutes remains visible and is labeled STALE; missing, invalid, future, invalid-progress, or unsourced project records show UNKNOWN.",
+    "No polling cadence, timer, fetch path, build projection, or source-selection behavior changed."
+  ],
+  "regression_coverage": [
+    "Actual headless Chrome fixture holds embedded build freshness FRESH while old current-report and project timestamps render both values as STALE.",
+    "Actual-browser independent timestamp cases prove old report/fresh project and fresh report/old project are independently labeled.",
+    "Actual-browser project future, null, and invalid timestamp cases show UNKNOWN.",
+    "Desktop and 375px mobile layouts keep the progress card visible only on Now, hide inactive tabs, and match ask summary counts to rendered statuses."
+  ],
+  "verification": {
+    "python": "python3 -m unittest discover -s tests -v — exit 0, 64 tests",
+    "node": "node --test tests/*.cjs — exit 0, 69 tests; includes actual headless Chrome desktop/mobile check",
+    "python_compile": "python3 -m py_compile build.py tests/test_tracked_work.py tests/test_public_privacy.py — exit 0",
+    "diff_check": "git diff --check — exit 0 before receipt commit",
+    "candidate_preview": {
+      "url": "http://127.0.0.1:8765/",
+      "process_session_id": 36917,
+      "source": "updated candidate template over existing approved Pages artifact snapshot from run 37705804967; no token access",
+      "served_html_sha256": "18ff0c1000fabeadb01ca7c54a6dbf03f364a30c0815553a522c847e3f3687e1",
+      "source_timestamp_behavior_at_preview_read": "Current report and project timestamps were each evaluated against current view time; both old values display STALE.",
+      "no_deployment": true
+    },
+    "ci": "No CI claim; no merge/deploy"
+  },
+  "independent_review": "Astra19 exact-head desktop/mobile re-review pending.",
+  "scope": "Candidate-only PR4 update. No deploy, merge, workflow dispatch, credentials, spend, cadence change, or settings change."
+}
