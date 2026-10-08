@@ -348,6 +348,8 @@ def load_ad_publish(path=AD_PUBLISH_FILE):
         return False
 
 def ad_report_rows():
+    if not os.environ.get("NOTION_TOKEN"):
+        return [], "Ad Reports not read (no build connection)."
     try:
         try:
             pages = q(AD_REPORTS_DS, {}, route="data_sources", version="2025-09-03")
