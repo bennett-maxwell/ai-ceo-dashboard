@@ -85,6 +85,8 @@ class TrackedWorkTests(unittest.TestCase):
   raw = {'tracked_work': build.owned_work_projection([PROJECT], [report('private-row-id', '2026-10-07T23:45:00Z', 40)], NOW)}
   html = build.render(raw, '2026-10-07T23:50:00Z')
   self.assertIn('Current report progress:', html)
+  self.assertIn('<div class="tracked-work">', html)
+  self.assertNotIn('<section class="tracked-work">', html)
   self.assertIn('Project-recorded:', html)
   self.assertIn('Mismatch:', html)
   self.assertIn('MOVING', html)

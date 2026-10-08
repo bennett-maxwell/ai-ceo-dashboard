@@ -1,0 +1,42 @@
+{
+  "receipt_version": "public-dashboard-worker-08",
+  "status": "CANDIDATE_REVIEW_PENDING",
+  "repository": "bennett-maxwell/ai-ceo-dashboard",
+  "pull_request": "https://github.com/bennett-maxwell/ai-ceo-dashboard/pull/4",
+  "branch": "codex/d2-r5-visible-progress",
+  "base_commit": "1152f51e901c1efa6855d4ee3dcfb08970680cae",
+  "exact_implementation_commit": "ef6288bf1584245b5e6f8eb19db0ddb3deb3c0a7",
+  "previous_reviewer": "astra-shipping-18.json",
+  "previous_review_head": "6ed6f9a1be52da5d1860b7a0eb8cb538767c31c9",
+  "changes": [
+    "Compute report freshness from validated source as_of against Date.now at each existing render, not the build-time freshness field.",
+    "Reuse the existing 60-second render/refresh path; no new interval, poll cadence, or network request was added.",
+    "A valid report older than five minutes remains visible as sourced last-known progress with STALE; invalid/missing/future timestamps, null/invalid progress, or unmatched/ambiguous relations display UNKNOWN or AMBIGUOUS without a current claim.",
+    "Project progress/status/as-of/freshness remain separately labeled and preserve the existing mismatch warning."
+  ],
+  "regression_coverage": [
+    "Actual headless browser fixture keeps source/build freshness FRESH with report as-of two minutes before build but over five minutes before view; card keeps 10% and shows STALE.",
+    "Same actual-browser fixture mutates as-of to future and null separately; both display UNKNOWN for report progress/status/as-of/freshness.",
+    "Earlier actual desktop/mobile computed-style checks prove progress card visible on Now and inactive tabs hidden; ask summary counts match rendered rows.",
+    "Source pipeline privacy, newest-relation, incomplete-relation, invalid, stale, and ambiguity tests remain unchanged and green."
+  ],
+  "verification": {
+    "python": "python3 -m unittest discover -s tests — exit 0, 64 tests",
+    "node": "all tests/*.cjs — exit 0, 69 tests",
+    "headless_chrome": "tests/test_mobile375.cjs — exit 0; actual browser stale-as-of, null, future, mobile/desktop visibility, inactive-tab hiding, and ask-count cases",
+    "python_compile": "python3 -m py_compile build.py tests/test_tracked_work.py tests/test_public_privacy.py — exit 0",
+    "diff_check": "git diff --check — exit 0",
+    "candidate_preview": {
+      "url": "http://127.0.0.1:8765/",
+      "process_session_id": 13048,
+      "source": "candidate template over approved Pages artifact snapshot from run 37705804967; no token access",
+      "served_html_sha256": "d0c609371f8da0bb5e341d8e64afc2e635742743aedd732683dd2ad8e5ab8ee6",
+      "embedded_build_at": "2026-10-08T00:06:21.124371Z",
+      "embedded_source_freshness": "FRESH",
+      "raw_32_hex_source_ids": false
+    },
+    "ci": "No CI claim; no merge/deploy"
+  },
+  "independent_review": "New exact-head actual browser re-review pending.",
+  "scope": "Candidate-only PR4 update. No deployment authorization applies to this new head. No merge, deploy, workflow dispatch, credentials, spend, or timer change."
+}

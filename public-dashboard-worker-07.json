@@ -1,0 +1,32 @@
+{
+  "receipt_version": "public-dashboard-worker-07",
+  "status": "CANDIDATE_REVIEW_PENDING",
+  "repository": "bennett-maxwell/ai-ceo-dashboard",
+  "pull_request": "https://github.com/bennett-maxwell/ai-ceo-dashboard/pull/4",
+  "branch": "codex/d2-r5-visible-progress",
+  "base_commit": "1152f51e901c1efa6855d4ee3dcfb08970680cae",
+  "implementation_commit": "0b998c0bc3dc76754c1c6c13d855be28c6f8c845",
+  "frozen_plan": "/Users/temp/Documents/New project.nosync/receipts/20261007-ceo-clockin-repair/R5-PUBLIC-VISIBILITY-PLAN.md",
+  "changes": [
+    "Render the current/project progress card as a div inside the Now tab, avoiding the global hidden-section rule for nested section elements while leaving top-level tab sections unchanged.",
+    "Normalize known canonical ask statuses for both row labels and counts from the same mapping; include Stuck and Unknown totals so statuses shown in rows are represented in summary counts.",
+    "Add headless Chrome computed-visibility tests at 375px and 1280px, including inactive-tab hiding, plus uppercase ask-status count/row regression tests."
+  ],
+  "verification": {
+    "python": "python3 -m unittest discover -s tests — exit 0, 64 tests",
+    "node": "all tests/*.cjs — exit 0, 69 tests",
+    "headless_chrome": "tests/test_mobile375.cjs — exit 0; real 375px and 1280px computed styles: tracked progress card displayed on Now, inactive asks hidden; ask rows and counts match",
+    "python_compile": "python3 -m py_compile build.py tests/test_tracked_work.py tests/test_public_privacy.py — exit 0",
+    "diff_check": "git diff --check — exit 0",
+    "candidate_preview": {
+      "url": "http://127.0.0.1:8765/",
+      "process_session_id": 13048,
+      "source": "approved Pages artifact from run 37705804967, reconstructed with candidate template; no token access",
+      "served_html_sha256": "f6fc1f28841c0219ac58fb9615fb4438c9c241377667f4e08ed62a6c80de6df4",
+      "raw_32_hex_source_ids": false
+    },
+    "ci": "No PR CI claim; workflow checks are not a substitute for independent browser review"
+  },
+  "independent_review": "Pending non-builder desktop/mobile browser preview and count verification.",
+  "scope": "No merge, deploy, workflow dispatch, new timer, credential read, spend, or settings change. Prior PR3 deployment approval does not apply to this new candidate head."
+}

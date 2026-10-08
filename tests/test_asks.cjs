@@ -34,7 +34,7 @@ test('top line, counts and the three sections render with one row per ask and pe
  const n=k=>asks.asks.filter(a=>a.status===k).length;
  const counts=h.match(/<p class="counts"[^>]*>[\s\S]*?<\/p>/g).map(p=>p.replace(/<[^>]+>/g,''));
  assert.equal(counts[0],`${asks.asks.length} asks · Done ${n('Done')} · In progress ${n('In progress')} · Needs you ${n('Needs you')}`);
- assert.equal(counts[1],`Unproved ${n('Unproved')} · Not started ${n('Not started')}`);
+ assert.equal(counts[1],`Unproved ${n('Unproved')} · Not started ${n('Not started')} · Stuck ${n('Stuck')} · Unknown ${asks.asks.filter(a=>!['Done','In progress','Needs you','Unproved','Not started','Stuck'].includes(a.status)).length}`);
  assert.match(h,/A\. Everything you asked for/);assert.match(h,/B\. Every lane and who owns it/);assert.match(h,/C\. Needs you/);
  for(const c of ['#','Your ask','Owner','Lane','Status','Proof','Last update'])assert.ok(h.includes(`<th>${c}</th>`),c);
  assert.equal((h.match(/data-l="Your ask"/g)||[]).length,asks.asks.length);
@@ -58,6 +58,16 @@ test('lane rows merge live board status and link to the project',()=>{
 test('asks data carries no emails or phone numbers',()=>{
  const raw=fs.readFileSync('asks.json','utf8');
  assert.doesNotMatch(raw,/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/);assert.doesNotMatch(raw,/\(?\d{3}\)?[-. ]\d{3}[-. ]\d{4}/);
+});
+test('uppercase canonical source statuses display and count with the visible ask rows',()=>{
+ const statuses=['DONE','IN PROGRESS','NEEDS YOU','UNPROVED','NOT STARTED','UNKNOWN','MYSTERY'];
+ const {env}=run('',data=>{data.asks.asks=statuses.map((status,n)=>({n:n+1,ask:`Ask ${n+1}`,owner:'Owner',lane:'Lane',status,updated:'today'}))});
+ const h=env.asks.innerHTML;
+ const askTable=h.split('<h2>B. Every lane')[0];
+ const rows=[...askTable.matchAll(/<td data-l="Status"><span class="st [^"]*">([^<]*)<\/span><\/td>/g)].map(m=>m[1]);
+ assert.deepEqual(rows,['Done','In progress','Needs you','Unproved','Not started','Unknown','Unknown']);
+ assert.match(h,/id="ask-counts">7 asks · <span class="st st-done">Done<\/span> 1 · <span class="st st-prog">In progress<\/span> 1 · <span class="st st-need">Needs you<\/span> 1/);
+ assert.match(h,/<span class="st st-unp">Unproved<\/span> 1 · <span class="st st-not">Not started<\/span> 1 · <span class="st st-stuck">Stuck<\/span> 0 · <span class="st st-unp">Unknown<\/span> 2/);
 });
 test('R11: no KPI row shows more than 4 numbers',()=>{
  const {env}=run('#now');const h=env.now.innerHTML;
