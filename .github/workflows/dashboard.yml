@@ -4,7 +4,7 @@ on:
     branches: [main]
   schedule: [{cron: "3,13,23,33,43,53 * * * *"}]
   workflow_dispatch: {}
-permissions: {contents: read, pages: write, id-token: write, deployments: read}
+permissions: {contents: read, pages: write, id-token: write}
 concurrency: {group: pages, cancel-in-progress: false}
 jobs:
   build:
@@ -20,13 +20,5 @@ jobs:
         env: {NOTION_TOKEN: "${{ secrets.NOTION_TOKEN }}", SCRUB_TERMS: "${{ secrets.SCRUB_TERMS }}"}
       - uses: actions/upload-pages-artifact@v3
         with: {path: site}
-      # A cancelled run can leave a Pages deploy stuck "in progress", which makes every later deploy fail (400).
-      # The pages concurrency group means no other deploy can be live right now, so any in-progress one is stuck.
-      - name: Clear stuck Pages deploys
-        env: {GH_TOKEN: "${{ github.token }}"}
-        run: |
-          for sha in $(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=github-pages&per_page=10" --jq '.[].sha' | sort -u); do
-            gh api -X POST "repos/$GITHUB_REPOSITORY/pages/deployments/$sha/cancel" >/dev/null 2>&1 && echo "cancelled $sha" || true
-          done
       - uses: actions/deploy-pages@v4
         with: {timeout: 900000}
