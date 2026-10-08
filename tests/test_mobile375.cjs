@@ -13,6 +13,8 @@ const css=html.slice(html.indexOf('<style>'),html.indexOf('</style>'));
 function page(){
  const fleet=JSON.parse(fs.readFileSync('agents48.json','utf8'));
  const data={primary_agents:[DASH],agents:[{url:DASH,Agent:'Dash',Projects:[],Device:[]}],devices:[],projects:[],checkins:[],
+  tracked_work:{label:'CEO clock-in repair',progress:10,progress_state:'SOURCED',status:'WORKING',as_of:LOG,freshness:'FRESH',checkin_status:'WORKING',checkin_logged:LOG,checkin_state:'MATCHED',project_progress:25,project_progress_state:'SOURCED',project_status:'MOVING',project_as_of:LOG,project_freshness:'FRESH',mismatch:true},
+  asks:{asks:['DONE','IN PROGRESS','NEEDS YOU','UNPROVED','NOT STARTED','UNKNOWN'].map((status,n)=>({n:n+1,ask:`Ask ${n+1}`,owner:'Owner',lane:'Lane',status,updated:'today'})),lanes:[],needs_you:[]},
   report_coverage:{exhaustive:true,unique_rows:1,per_agent:{[DASH]:{agent_id:DASH,included:true,exhaustive:true,matching_rows:1,latest:{url:'r',Agent:[DASH],Logged:LOG,Time:LOG,Status:'WORKING',Device:[],Project:[]}}}},fleet};
  return html.replace('__REPORT_STATUS__',fs.readFileSync('report_status.js','utf8')).replace('__AT__','2026-10-06T03:47:00Z').replace('__SNAP__',JSON.stringify(data));
 }
@@ -39,7 +41,7 @@ test('the check-in time is one unbreakable unit on every lane head (Grok, Dash, 
 });
 const CHROME=[process.env.CHROME_BIN,'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find(p=>p&&fs.existsSync(p));
 const skip=!CHROME?'no Chrome binary':typeof WebSocket!=='function'?'no global WebSocket in this Node':false;
-test('real 375 px layout in headless Chrome: intro below the bar after a jump; time on one line inside the gutter',{skip,timeout:60000},async()=>{
+test('real 375 px and desktop Chrome: tab visibility, progress card and ask counts match visible rows',{skip,timeout:60000},async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dash375-'));fs.writeFileSync(path.join(dir,'page.html'),page());
  const args=['--headless=new','--remote-debugging-port=0','--user-data-dir='+path.join(dir,'prof'),'--no-first-run','--no-default-browser-check'];
  if(process.platform==='linux')args.push('--no-sandbox','--disable-gpu','--disable-dev-shm-usage');
@@ -58,12 +60,20 @@ test('real 375 px layout in headless Chrome: intro below the bar after a jump; t
    const i=document.querySelector('#grok .start');i.scrollIntoView();o.introTop=i.getBoundingClientRect().top;o.bar1=bar();
    const h=document.querySelector('#grok h2.fh');h.scrollIntoView();o.h2Top=h.getBoundingClientRect().top;o.bar2=bar();return o})()`);
   const ts=await go('dash',`[...document.querySelectorAll('#dash .fmeta')].filter(e=>e.textContent.startsWith('Last check-in')).map(e=>{const s=e.querySelector('.ts');if(!s)return{lines:0,right:0};const rg=document.createRange();rg.selectNodeContents(s);const rs=[...rg.getClientRects()];return{lines:rs.length,right:Math.max(...rs.map(x=>x.right))}})`);
-  const v={...jump,ts};
+  const mobileNow=await go('now',`(()=>{const card=document.querySelector('#now .tracked-work');return{cardDisplay:getComputedStyle(card).display,cardText:card.innerText,nowDisplay:getComputedStyle(document.querySelector('#now')).display,asksDisplay:getComputedStyle(document.querySelector('#asks')).display}})()`);
+  const askView=await go('asks',`(()=>({summary:[...document.querySelectorAll('#asks .counts')].map(x=>x.innerText).join(' · '),rows:[...document.querySelectorAll('#asks tbody tr td[data-l="Status"]')].map(x=>x.innerText),asksDisplay:getComputedStyle(document.querySelector('#asks')).display,nowDisplay:getComputedStyle(document.querySelector('#now')).display}))()`);
+  await S('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+  const desktopNow=await go('now',`(()=>{const card=document.querySelector('#now .tracked-work');return{cardDisplay:getComputedStyle(card).display,cardText:card.innerText,nowDisplay:getComputedStyle(document.querySelector('#now')).display,asksDisplay:getComputedStyle(document.querySelector('#asks')).display}})()`);
+  const v={...jump,ts,mobileNow,askView,desktopNow};
   sock.close();
   assert.equal(v.vw,375);assert.equal(v.docW,375,'no sideways scroll');
   assert.ok(v.introTop>=v.bar1,`intro top ${v.introTop} is below the tab bar bottom ${v.bar1}`);
   assert.ok(v.h2Top>=v.bar2,`lane heading top ${v.h2Top} is below the tab bar bottom ${v.bar2}`);
   assert.ok(v.ts.length>=1,'at least one lane shows a check-in time');
   for(const t of v.ts){assert.equal(t.lines,1,'check-in time renders on one line');assert.ok(t.right<=375-12,`check-in time right edge ${t.right} keeps a 12 px gutter`)}
+  for(const view of [v.mobileNow,v.desktopNow]){assert.equal(view.cardDisplay,'block');assert.equal(view.nowDisplay,'block');assert.equal(view.asksDisplay,'none');assert.match(view.cardText,/Current report progress: 10%/);assert.match(view.cardText,/Project-recorded: 25%/)}
+  assert.equal(v.askView.asksDisplay,'block');assert.equal(v.askView.nowDisplay,'none');
+  assert.deepEqual(v.askView.rows,['Done','In progress','Needs you','Unproved','Not started','Unknown']);
+  assert.match(v.askView.summary,/Done 1 · In progress 1 · Needs you 1/);assert.match(v.askView.summary,/Unproved 1 · Not started 1 · Stuck 0 · Unknown 1/);
  }finally{chrome.kill()}
 });
