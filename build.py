@@ -332,6 +332,76 @@ def aiceo_rows(diagnostics=None):
         out.append(r)
     return out, f"{len(out)} rows read"
 
+# SHIP-23 Ad Reports tab, read from the 📊 Ad Reports data source (Command Center). Brand names, spend, leads
+# and CPL are internal until ad_reports_public.json says publish_figures: true (Bennett's call, human gate);
+# until then the public page shows only which brand-weeks have a report on file, under "Brand N" labels.
+AD_REPORTS_DS = "3e13833b1cc044bbb3b26523dad05e8d"
+AD_REPORTS_DB = "96e521a4224842948fd507374c48dcf2"
+AD_BRANDS = ("SH", "Indy Clover", "SRP", "Loft", "Advaita", "FKI")
+AD_PUBLISH_FILE = "ad_reports_public.json"
+
+def load_ad_publish(path=AD_PUBLISH_FILE):
+    """True only when the committed file says exactly publish_figures: true. Anything else keeps figures private."""
+    try:
+        return json.loads(Path(path).read_text()).get("publish_figures") is True
+    except (OSError, ValueError, AttributeError):
+        return False
+
+def ad_report_rows():
+    try:
+        try:
+            pages = q(AD_REPORTS_DS, {}, route="data_sources", version="2025-09-03")
+        except urllib.error.HTTPError as e:
+            if e.code not in (400, 404):
+                raise
+            pages = q(AD_REPORTS_DB, {})
+    except urllib.error.HTTPError as e:
+        return [], f"Ad Reports not readable with the build connection (HTTP {e.code})."
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        return [], "Ad Reports read failed."
+    out = []
+    for pg in pages:
+        props = pg.get("properties", {})
+        r = {"url": pg["id"].replace("-", "")}
+        for name in ("Brand", "Week start", "Spend", "Leads", "CPL", "Pull time"):
+            r[name] = val(props[name]) if name in props else None
+        out.append(r)
+    return out, f"{len(out)} rows read"
+
+def ad_weeks(at):
+    """The last two full Monday-start weeks before the current one, newest first."""
+    monday = at.date() - datetime.timedelta(days=at.weekday())
+    return [(monday - datetime.timedelta(days=7 * n)).isoformat() for n in (1, 2)]
+
+def ad_reports_projection(src, at, publish):
+    """Every brand x last-two-weeks cell, filed or not. Figures and real brand names only when publish is True."""
+    weeks = ad_weeks(at)
+    rows = src.get("rows") or []
+    cells, labels = [], []
+    for i, brand in enumerate(AD_BRANDS, 1):
+        label = brand if publish else f"Brand {i}"
+        labels.append(label)
+        for week in weeks:
+            start = datetime.date.fromisoformat(week)
+            hits = []
+            for r in rows:
+                try:
+                    d = datetime.date.fromisoformat(str(r.get("Week start") or "")[:10])
+                except ValueError:
+                    continue
+                if r.get("Brand") == brand and start <= d < start + datetime.timedelta(days=7):
+                    hits.append(r)
+            hit = max(hits, key=lambda r: str(r.get("Pull time") or "")) if hits else None
+            cell = {"brand": label, "week": week, "filed": hit is not None,
+                    "spend": None, "leads": None, "cpl": None, "pulled": None}
+            if publish and hit:
+                cell.update(spend=_public_number(hit.get("Spend"), 0), leads=_public_number(hit.get("Leads"), 0),
+                            cpl=_public_number(hit.get("CPL"), 0), pulled=_public_time(hit.get("Pull time")))
+            cells.append(cell)
+    read = src.get("status") == f"{len(rows)} rows read"
+    return {"weeks": weeks, "brands": labels, "figures": bool(publish), "state": "available" if read else "unavailable",
+            "filed": sum(c["filed"] for c in cells), "cells": cells}
+
 def snapshot():
     new = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
     snap = {k: rows(k) for k in DB if k not in ("checkins", "tasks", "coceo")}
@@ -357,6 +427,9 @@ def snapshot():
                       "checkins": coverage["unique_rows"], "checkins_feed_rows": len(feed), "aiceo": len(snap["aiceo"]),
                       "checkin_status": status_counts(reports)}
     snap["asks"] = load_asks()
+    ad_rows, ad_status = ad_report_rows()
+    snap["ad_reports"] = {"rows": ad_rows, "status": ad_status, "publish": load_ad_publish()}
+    print("ad_reports:", ad_status)
     snap["fleet"] = fleet_status(load_fleet(), reports, snap["agents"], snap["projects"])
     return snap
 
@@ -736,6 +809,8 @@ def public_projection(snap):
             "report_coverage": report_coverage, "project_checkins": project_checkins, "tracked_work": out_tracked,
             "counts": counts, "fleet": out_fleet, "asks": out_asks, "coceo": out_coceo, "caio": out_caio, "crons": out_crons,
             "fat20": out_fat20, "aiceo": out_aiceo,
+            "ad_reports": ad_reports_projection(snap.get("ad_reports") or {}, timestamp(snap.get("ad_reports_at")) or datetime.datetime.now(datetime.timezone.utc),
+                                                (snap.get("ad_reports") or {}).get("publish") is True),
             "aiceo_coverage": {"state": aiceo_cov.get("state") if aiceo_cov.get("state") in {"available", "empty", "unavailable"} else "unavailable",
                                "exhaustive": bool(aiceo_cov.get("exhaustive")),
                                "public_rows": int(_public_number(aiceo_cov.get("public_rows"), 0) or 0) if aiceo_cov.get("public_rows") is not None else None},
