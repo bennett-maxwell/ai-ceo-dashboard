@@ -1,5 +1,6 @@
 """Publish only the operational fields already displayed by the public dashboard."""
 import datetime
+import html
 import json
 import os
 from pathlib import Path
@@ -740,10 +741,28 @@ def public_projection(snap):
                                "public_rows": int(_public_number(aiceo_cov.get("public_rows"), 0) or 0) if aiceo_cov.get("public_rows") is not None else None},
             "aiceo_status": "Source coverage available; row details are withheld." if aiceo_cov.get("state") != "unavailable" else "Source coverage unavailable; private diagnostics are withheld."}
 
-def render(snap, at):
+CONTROL_FILE = "control.json"
+NOTE_MAX = 200
+
+def load_control(path=CONTROL_FILE):
+    """Small file any seat can overwrite whole (no read needed) to steer the page."""
+    try:
+        c = json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return {"note": ""}
+    note = str(c.get("note") or "").strip()[:NOTE_MAX]
+    return {"note": note}
+
+def note_html(note):
+    return f'<div class="sub" id="note"><b>Note:</b> {html.escape(note)}</div>' if note else ""
+
+def render(snap, at, control=None, sha=""):
+    control = control if control is not None else {"note": ""}
+    built = html.escape(at + (f" · {sha[:7]}" if sha else ""))
     safe = public_projection(snap)
     data = json.dumps(safe, ensure_ascii=False).replace("</", "<\\/")
     return (Path("template.html").read_text().replace("__REPORT_STATUS__", Path("report_status.js").read_text() + "\n" + (Path("big.js").read_text() if Path("big.js").is_file() else ""))
+            .replace("__BUILT__", built).replace("__NOTE__", note_html(control["note"]))
             .replace("__AT__", at).replace("__SNAP__", data))
 
 def main():
@@ -755,8 +774,11 @@ def main():
     at = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
     site = Path("site")
     site.mkdir(exist_ok=True)
-    (site / "index.html").write_text(render(snap, at))
+    control, sha = load_control(), os.environ.get("GITHUB_SHA", "")
+    (site / "index.html").write_text(render(snap, at, control, sha))
     (site / "version.json").write_text(json.dumps({"built_at": at}))
+    # Fresh path per change so readers never get a stale cache: build.json carries the commit and the live note.
+    (site / "build.json").write_text(json.dumps({"built_at": at, "sha": sha, "note": control["note"]}))
     print("built", {k: len(v) for k, v in snap.items() if isinstance(v, list)}, "counts", snap["counts"], "aiceo:", snap["aiceo_status"], "at", at)
 
 if __name__ == "__main__":
