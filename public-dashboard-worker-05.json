@@ -1,0 +1,38 @@
+{
+  "receipt_version": "public-dashboard-worker-05",
+  "status": "CANDIDATE",
+  "repository": "bennett-maxwell/ai-ceo-dashboard",
+  "pull_request": 3,
+  "branch": "codex/d2-owned-progress-02",
+  "exact_head_before": "cf10fa289cbdf4748a1eab6670b3e8c040b74997",
+  "implementation_commit": "90884731960446693f30a0bd2c1a13c64b198189",
+  "base_branch": "main",
+  "exact_base_sha": "3b64997a1764e7b7ce182f2b24bb8ccd2fdf133d",
+  "worktree": "/tmp/ai-ceo-dashboard-d2-worker",
+  "changes": [
+    "Removed fixed check-in row selection; derive current owned progress/status/time from the newest timestamped exact Agent+Project relation-matched report.",
+    "Read check-in Progress % in the server-side source projection while excluding it from ordinary public activity rows and keeping source IDs server-only.",
+    "Publish current-report and project-recorded progress/status/as-of/freshness as separate fields; visibly flag differing progress values.",
+    "Current report freshness uses a five-minute evidence threshold; stale last-known values remain labeled STALE, while missing/invalid newest progress is null UNKNOWN with no fallback.",
+    "Future/malformed timestamps, incomplete relation bindings, and equal-time contradictory values fail closed as UNKNOWN or AMBIGUOUS; explicitly allowlist 🟡 Moving as MOVING."
+  ],
+  "regression_coverage": [
+    "Newer different-ID relation-matched report beats old report; source-shaped project 25% vs report 10% mismatch and 25-to-40 report transition retain separate values.",
+    "Missing/invalid newest progress does not fall back; stale report value remains visible as STALE; future/malformed/incomplete relations are not MATCHED; contradictory equal-time values are AMBIGUOUS.",
+    "Rendered JSON/HTML displays separated source fields and mismatch warning while suppressing source row ID, Notion IDs, and private fixture text.",
+    "Prior whole-page privacy, stable alias/reordering, unknown-agent, exact safe status, and owned progress tests remain in the suite."
+  ],
+  "verification": {
+    "python": "python3 -m unittest discover -s tests — exit 0, 63 tests",
+    "node": "for f in tests/*.cjs; do node $f; done — exit 0, 68 tests",
+    "python_compile": "python3 -m py_compile build.py tests/test_tracked_work.py — exit 0",
+    "diff_check": "git diff --check — exit 0",
+    "json_receipt": "python3 -m json.tool public-dashboard-worker-05.json — exit 0",
+    "live_source": "Not run by builder; independent live-source re-review pending",
+    "ci": "Not checked; no CI claim"
+  },
+  "gaps": [
+    "Independent reviewer must verify live newest-relation projection and compare current source values before readiness decision.",
+    "No live Notion-token build/snapshot, merge, deployment, or main-branch write was performed."
+  ]
+}

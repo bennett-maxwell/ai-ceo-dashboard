@@ -1,0 +1,37 @@
+{
+  "receipt_version": "public-dashboard-worker-03",
+  "status": "CANDIDATE",
+  "repository": "bennett-maxwell/ai-ceo-dashboard",
+  "pull_request": 3,
+  "branch": "codex/d2-owned-progress-02",
+  "exact_head_before": "e778f96eb54bfb5cf59582a1646015f7222b7e3c",
+  "exact_pr_head_before": "e778f96eb54bfb5cf59582a1646015f7222b7e3c",
+  "base_branch": "main",
+  "exact_base_sha": "3b64997a1764e7b7ce182f2b24bb8ccd2fdf133d",
+  "worktree": "/tmp/ai-ceo-dashboard-d2-worker",
+  "changes": [
+    "Apply a structural allowlist at HTML serialization so unapproved free text and source IDs cannot reach the public snapshot.",
+    "Replace Notion entity/relation IDs with generated public aliases; preserve seat coverage and generic status/freshness.",
+    "Keep numeric project/task progress, but replace private titles, asks, blocker/Doing/proof text, project details, contacts and device labels with generic labels or omit them.",
+    "Retain only source-derived CEO clock-in progress in the 0-100 range; invalid values become UNKNOWN and old source rows remain STALE."
+  ],
+  "privacy_fixture_coverage": [
+    "Whole rendered HTML with arbitrary lead/contact, email, phone, device, private project/task title, blocker, Doing text, proof URL, relation IDs, unexpected properties and unknown top-level data.",
+    "Assert all sentinel text and source relation IDs are absent from the complete rendered HTML.",
+    "Source-bound owned-work fixture from exact OWNED_WORK_AGENT / OWNED_WORK_PROJECT / OWNED_WORK_CHECKIN relation retains 40% and matched freshness.",
+    "Exact-relation stale fixture retains 25% while marking STALE; invalid/missing progress remains UNKNOWN."
+  ],
+  "verification": {
+    "python": "python3 -m unittest discover -s tests -p 'test*.py' — exit 0, 58 tests",
+    "node": "node --test tests/*.cjs — exit 0, 68 tests",
+    "python_compile": "python3 -m py_compile build.py tests/test_public_privacy.py — exit 0",
+    "diff_check": "git diff --check — exit 0",
+    "remote_pr_head_check": "git ls-remote origin refs/pull/3/head — e778f96eb54bfb5cf59582a1646015f7222b7e3c"
+  },
+  "gaps": [
+    "Independent privacy reviewer has not yet reviewed this candidate.",
+    "No live Notion-token snapshot/build was run; fixtures are synthetic.",
+    "PR checks/CI were not verified in this receipt.",
+    "No merge or deployment was performed."
+  ]
+}

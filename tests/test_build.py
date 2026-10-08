@@ -25,7 +25,7 @@ class BuildTests(unittest.TestCase):
         html = build.render({'projects':[row]}, '2026-10-04T19:00:00Z')
         self.assertNotIn('PRIVATE_SENTINEL', html)
         self.assertNotIn('Private note', html)
-        self.assertIn('Visible <\\/script>', html)
+        self.assertNotIn('Visible', html)
         for tab in ('asks','fleet','now','coceo','agents','devices','projects','tasks','caio','crons'):
             self.assertIn(f'<section id="{tab}">', html)
         self.assertIn('<meta name="robots" content="noindex, nofollow">', html)
@@ -185,7 +185,8 @@ class ExcludeTests(unittest.TestCase):
             for form in self.forms(i):
                 self.assertNotIn(form, site.lower())
         self.assertNotIn('PRIVATE_ROW_', site)
-        self.assertIn(keep, site); self.assertIn('Public task', site)
+        self.assertNotIn(keep, site); self.assertNotIn('Public task', site)
+        self.assertIn('Open task 1', site)
         self.assertIn(f'exclude: ids={len(ids)} dropped={len(ids)}', out.getvalue())
 
 class AsksTests(unittest.TestCase):
