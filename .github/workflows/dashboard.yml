@@ -9,7 +9,7 @@ concurrency: {group: pages, cancel-in-progress: false}
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     environment: {name: github-pages}
     steps:
       - uses: actions/checkout@v4
@@ -29,3 +29,4 @@ jobs:
             gh api -X POST "repos/$GITHUB_REPOSITORY/pages/deployments/$sha/cancel" >/dev/null 2>&1 && echo "cancelled $sha" || true
           done
       - uses: actions/deploy-pages@v4
+        with: {timeout: 900000}
