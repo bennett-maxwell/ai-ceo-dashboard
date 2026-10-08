@@ -66,7 +66,11 @@ test('real 375 px and desktop Chrome: tab visibility, progress card and ask coun
   const desktopNow=await go('now',`(()=>{const card=document.querySelector('#now .tracked-work');return{cardDisplay:getComputedStyle(card).display,cardText:card.innerText,nowDisplay:getComputedStyle(document.querySelector('#now')).display,asksDisplay:getComputedStyle(document.querySelector('#asks')).display}})()`);
   const future=await go('now',`(()=>{S.data.tracked_work.as_of='2099-01-01T00:00:00Z';render();return document.querySelector('#now .tracked-work').innerText})()`);
   const missing=await go('now',`(()=>{S.data.tracked_work.as_of=null;render();return document.querySelector('#now .tracked-work').innerText})()`);
-  const v={...jump,ts,mobileNow,askView,desktopNow,future,missing};
+  const projectFuture=await go('now',`(()=>{S.data.tracked_work.project_as_of='2099-01-01T00:00:00Z';render();return document.querySelector('#now .tracked-work').innerText})()`);
+  const projectMissing=await go('now',`(()=>{S.data.tracked_work.project_as_of=null;render();return document.querySelector('#now .tracked-work').innerText})()`);
+  const projectInvalid=await go('now',`(()=>{S.data.tracked_work.project_as_of='not-a-date';render();return document.querySelector('#now .tracked-work').innerText})()`);
+  const independent=await go('now',`(()=>{const w=S.data.tracked_work;w.as_of=new Date(Date.now()-10*60*1000).toISOString();w.project_as_of=new Date(Date.now()-60*1000).toISOString();render();const reportOld=document.querySelector('#now .tracked-work').innerText;w.as_of=new Date(Date.now()-60*1000).toISOString();w.project_as_of=new Date(Date.now()-10*60*1000).toISOString();render();return JSON.stringify({reportOld,projectOld:document.querySelector('#now .tracked-work').innerText})})()`);
+  const v={...jump,ts,mobileNow,askView,desktopNow,future,missing,projectFuture,projectMissing,projectInvalid,independent};
   sock.close();
   assert.equal(v.vw,375);assert.equal(v.docW,375,'no sideways scroll');
   assert.ok(v.introTop>=v.bar1,`intro top ${v.introTop} is below the tab bar bottom ${v.bar1}`);
@@ -79,5 +83,15 @@ test('real 375 px and desktop Chrome: tab visibility, progress card and ask coun
   assert.match(v.askView.summary,/Done 1 · In progress 1 · Needs you 1/);assert.match(v.askView.summary,/Unproved 1 · Not started 1 · Stuck 0 · Unknown 1/);
   assert.match(v.future,/Current report progress: UNKNOWN · UNKNOWN · report logged UNKNOWN · UNKNOWN/);
   assert.match(v.missing,/Current report progress: UNKNOWN · UNKNOWN · report logged UNKNOWN · UNKNOWN/);
+  assert.match(v.projectFuture,/Project-recorded: UNKNOWN · UNKNOWN · project edited UNKNOWN · UNKNOWN/);
+  assert.match(v.projectMissing,/Project-recorded: UNKNOWN · UNKNOWN · project edited UNKNOWN · UNKNOWN/);
+  assert.match(v.projectInvalid,/Project-recorded: UNKNOWN · UNKNOWN · project edited UNKNOWN · UNKNOWN/);
+  const reportCases=JSON.parse(v.independent);
+  assert.match(reportCases.reportOld,/Current report progress: 10% · WORKING · report logged [^·]+ · STALE/);
+  assert.match(reportCases.reportOld,/Project-recorded: 25% · MOVING · project edited [^·]+ · FRESH/);
+  assert.match(reportCases.projectOld,/Project-recorded: 25% · MOVING · project edited [^·]+ · STALE/);
+  assert.match(reportCases.projectOld,/Current report progress: 10% · WORKING · report logged [^·]+ · FRESH/);
+  assert.match(v.mobileNow.cardText,/Current report progress: 10%[^\n]+STALE/);
+  assert.match(v.mobileNow.cardText,/Project-recorded: 25%[^\n]+STALE/);
  }finally{chrome.kill()}
 });
